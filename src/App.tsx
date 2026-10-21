@@ -4781,10 +4781,10 @@ export default function App() {
         masterDeckRef.current = nextDeck;
         triggerSfx('victory');
         setModalAlert({
-          title: "WARMED AGAIN",
-          message: `${targetCard.name} absorbs the blazing heat, growing exceptionally formidable!`,
+          title: "BATHED AGAIN",
+          message: `${targetCard.name} absorbs the blood blessing, growing exceptionally formidable!`,
           isWin: true,
-          btnText: "Leave Campfire",
+          btnText: "Leave the Chapel",
           onAction: () => {
             setModalAlert(null);
             startNextDuel(undefined, nextDeck);
