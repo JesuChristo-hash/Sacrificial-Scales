@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, type JSX } from 'react';
+// @ts-ignore
+import discordGif from './assets/text/sidehustle-discord.gif';
 import cardBaseImg from './assets/card/card_base.png';
 import bloodMoonImg from './assets/card/blood_moon.png';
+
 import {
   Skull,
   Flame,
@@ -33,7 +36,7 @@ import {
 
 // --- Types & Data Definitions ---
 export type Tribe = 'No Class' | 'Reptile' | 'Avian' | 'Canine' | 'Hooved' | 'Insect' | 'ALL Classes';
-
+export type CardInstance = any;
 export const TRIBE_ICONS: Record<Tribe, string> = {
   'Canine': '🐺',
   'Insect': '🕷️',
@@ -4155,14 +4158,14 @@ export default function App() {
       return;
     }
 
-    let winMessage = "The scale tipped decisively in your favor. Choose your next encounter.";
+    let winMessage = "Your Creatures struck true, thy Foe lays in ruin.";
     if (isBossMatch) {
       if (bossState.type === 'Zealot') {
-        winMessage = "The Zealot retreats into the subterranean darkness, abandoning his stones.";
+        winMessage = "The Zealot suddenly retreats with a shriek. A savage scampering back to his Steeple to screech Gospel.";
       } else if (bossState.type === 'The Begotten' || (bossState.type as any) === 'Goobert') {
-        winMessage = "The Begotten dissolves into a pool of green sludge, leaving its brushes behind.";
+        winMessage = "The Begotten wriggles and writhes in the dirt, crying a woeful wail as he wallows.";
       } else if (bossState.type === 'The Weaver' || (bossState.type as any) === 'Woodcarver') {
-        winMessage = "The Weaver gathers her severed threads and melts into the dark pines.";
+        winMessage = "The Weaver gravely grasped her poppet, violently rending it usunder before vanishing.";
       }
     }
 
@@ -4170,7 +4173,7 @@ export default function App() {
       title: "Enemy Felled",
       message: winMessage,
       isWin: true,
-      btnText: "Press Onward",
+      btnText: "Press Forward",
       onAction: () => {
         setModalAlert(null);
         if (isBossMatch) {
@@ -5908,33 +5911,61 @@ export default function App() {
           </div>
 
           <div className="relative z-20 flex flex-col items-center justify-center text-center max-w-4xl w-full mx-auto my-auto">
-            
-            {/* Direct, Frame-less High-Fidelity ASCII Title Display */}
-            <div className="flex flex-col items-center justify-center w-full px-2">
-              <pre className="text-red-500 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal">
-{`   ▄████████    ▄████████  ▄████████    ▄████████  ▄█     ▄████████  ▄█   ▄████████  ▄█     ▄████████  ▄█
-  ███    ███   ███    ███ ███    ███   ███    ███ ███    ███    ███ ███  ███    ███ ███    ███    ███ ███
-  ███    █▀    ███    ███ ███    █▀    ███    ███ ███▌   ███    █▀  ███▌ ███    █▀  ███▌   ███    ███ ███
-  ███          ███    ███ ███         ▄███▄▄▄▄██▀ ███▌  ▄███▄▄▄     ███▌ ███        ███▌   ███    ███ ███
-▀███████████ ▀███████████ ███        ▀▀███▀▀▀▀▀   ███▌ ▀▀███▀▀▀     ███▌ ███        ███▌ ▀███████████ ███
-         ███   ███    ███ ███    █▄  ▀███████████ ███    ███        ███  ███    █▄  ███    ███    ███ ███
-   ▄█    ███   ███    ███ ███    ███   ███    ███ ███    ███        ███  ███    ███ ███    ███    ███ ███▌    ▄
- ▄████████▀    ███    █▀  ████████▀    ███    ███ █▀     ███        █▀   ████████▀  █▀     ███    █▀  █████▄▄██
-                                       ███    ███                                                     ▀`}
-              </pre>
+  
+  {/* Direct, Frame-less High-Fidelity ASCII Title Display */}
+  <div className="flex flex-col items-center justify-center w-full px-2">
+  {/* THREAD */}
+  <pre className="text-red-500 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal">
+{`    ███        ▄█    █▄       ▄████████    ▄████████    ▄████████ ████████▄  
+▀█████████▄   ███    ███     ███    ███   ███    ███   ███    ███ ███   ▀███ 
+   ▀███▀▀██   ███    ███     ███    ███   ███    █▀    ███    ███ ███    ███ 
+    ███   ▀  ▄███▄▄▄▄███▄▄  ▄███▄▄▄▄██▀  ▄███▄▄▄       ███    ███ ███    ███ 
+    ███     ▀▀███▀▀▀▀███▀  ▀▀███▀▀▀▀▀   ▀▀███▀▀▀     ▀███████████ ███    ███ 
+    ███       ███    ███   ▀███████████   ███    █▄    ███    ███ ███    ███ 
+    ███       ███    ███     ███    ███   ███    ███   ███    ███ ███   ▄███ 
+   ▄████▀     ███    █▀      ███    ███   ██████████   ███    █▀  ████████▀  
+    ██                       ███    ███                                      `}
+  </pre>
 
-              <pre className="text-red-600 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal mt-2 sm:mt-3">
-{`   ▄████████  ▄████████    ▄████████  ▄█          ▄████████    ▄████████
-  ███    ███ ███    ███   ███    ███ ███         ███    ███   ███    ███
-  ███    █▀  ███    █▀    ███    ███ ███         ███    █▀    ███    █▀
-  ███        ███          ███    ███ ███        ▄███▄▄▄       ███
-▀███████████ ███        ▀███████████ ███       ▀▀███▀▀▀     ▀███████████
-         ███ ███    █▄    ███    ███ ███         ███    █▄           ███
-   ▄█    ███ ███    ███   ███    ███ ███▌    ▄   ███    ███    ▄█    ███
- ▄████████▀  ████████▀    ███    █▀  █████▄▄██   ██████████  ▄████████▀
-                                     ▀`}
-              </pre>
-            </div>
+  {/* & (Centered) */}
+  <pre className="text-red-500 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal my-2">
+{`    ▄▄▄▄     
+   ██  ██    
+   ▀██▄█▀    
+   ▄████▄▄█▀ 
+   ██▀  ██▄   
+   ▀█▄▄██▀▀█▄ `}
+  </pre>
+
+  {/* BONES (Centered) */}
+  <pre className="text-red-600 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal">
+{`  ▀█████████▄   ▄██████▄  ███▄▄▄▄      ▄████████    ▄████████ 
+    ███    ███ ███    ███ ███▀▀▀██▄   ███    ███   ███    ███ 
+    ███    ███ ███    ███ ███   ███   ███    █▀    ███    █▀  
+   ▄███▄▄▄██▀  ███    ███ ███   ███  ▄███▄▄▄       ███        
+  ▀▀███▀▀▀██▄  ███    ███ ███   ███ ▀▀███▀▀▀     ▀███████████ 
+    ███    ██▄ ███    ███ ███   ███   ███    █▄           ███ 
+    ███    ███ ███    ███ ███   ███   ███    ███    ▄█    ███ 
+  ▄█████████▀   ▀██████▀   ▀█   █▀    ██████████  ▄████████▀  `}
+  </pre>
+</div>
+
+  {/* Existing BEGIN RITUAL button goes here */}
+
+  {/* Persistent Bottom-Left Discord Link */}
+  <a
+    href="https://discordapp.com/invite/FwPgPW2RcR"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 transition-transform duration-150 hover:scale-110 active:scale-95 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)]"
+    title="[SIDE HUSTLE]"
+  >
+    <img
+  src={discordGif}
+  alt="Discord Community"
+  className="w-11 h-11 sm:w-14 sm:h-14 object-contain [image-rendering:pixelated]"
+/>
+  </a>
 
             {/* Ritual Action Button */}
             <button
@@ -5950,15 +5981,20 @@ export default function App() {
                   setScreen('DECK_SELECT');
                 }
               }}
-              className="mt-12 group cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200 pointer-events-auto z-50 select-none focus:outline-none flex items-center justify-center"
-            >
-              <img
-                src={`${BASE}/assets/text/begin-ritual.png`}
-                alt="Begin Ritual"
-                className="h-12 sm:h-14 w-auto object-contain drop-shadow-[0_0_20px_rgba(185,28,28,0.55)] group-hover:drop-shadow-[0_0_35px_rgba(239,68,68,0.85)] group-hover:brightness-110 transition-all pointer-events-none"
-                style={{ imageRendering: 'pixelated' }}
-              />
-            </button>
+              className="group mt-8 sm:mt-12 cursor-pointer bg-transparent border-0 p-0 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95"
+  >
+    <pre className="text-red-600 group-hover:text-red-400 font-bold animate-occult-pulse text-[3.2px] sm:text-[4.8px] md:text-[6.5px] lg:text-[8px] whitespace-pre font-mono leading-none select-none tracking-normal transition-colors duration-150 drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]">
+{`        ▀█████████▄     ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█      ███     ███    █▄     ▄████████  ▄█       
+         ███    ███   ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███  ▀█████████▄ ███    ███   ███    ███ ███       
+         ███    ███   ███    █▀    ███    █▀  ███▌ ███   ███        ███    ███ ███▌    ▀███▀▀██ ███    ███   ███    ███ ███       
+        ▄███▄▄▄██▀   ▄███▄▄▄      ▄███        ███▌ ███   ███       ▄███▄▄▄▄██▀ ███▌     ███   ▀ ███    ███   ███    ███ ███       
+       ▀▀███▀▀▀██▄  ▀▀███▀▀▀     ▀▀███ ████▄  ███▌ ███   ███      ▀▀███▀▀▀▀▀   ███▌     ███     ███    ███ ▀███████████ ███       
+         ███    ██▄   ███    █▄    ███    ███ ███  ███   ███      ▀███████████ ███      ███     ███    ███   ███    ███ ███       
+         ███    ███   ███    ███   ███    ███ ███  ███   ███        ███    ███ ███      ███     ███    ███   ███    ███ ███▌    ▄ 
+       ▄█████████▀    ██████████   ████████▀  █▀    ▀█   █▀         ███    ███ █▀      ▄████▀   ████████▀    ███    █▀  █████▄▄██ 
+                                                                   ███    ███                                             ▀     `}
+    </pre>
+  </button>
           </div>
         </div>
       )}
@@ -6215,7 +6251,7 @@ export default function App() {
             {/* Player's Starter Deck directly on the surface */}
             <div className="flex flex-col items-center">
               <h2 className="text-xs font-mono font-bold text-amber-300/80 uppercase tracking-widest mb-3">
-                Your Starting Stash
+                Your Creatures
               </h2>
               <div className="flex flex-col items-center justify-center gap-2 w-full min-h-[140px]">
                 {/* Row 1: 3 Starter Creatures */}
@@ -6277,7 +6313,7 @@ export default function App() {
             {/* Scavenge Trade Pool directly on the surface */}
             <div className="flex flex-col items-center">
               <h2 className="text-xs font-mono font-bold text-red-300/80 uppercase tracking-widest mb-3">
-                Scavenge Pool
+                Merchant's Shop
               </h2>
               <div className="flex flex-col items-center justify-center gap-3 w-full min-h-[140px]">
                 {/* Row 1: Top 4 Cards */}
@@ -6377,23 +6413,23 @@ export default function App() {
           style={getScreenBgStyle('crossroads-select.jpg')}
         >
           <div className="flex flex-col items-center justify-center max-w-3xl w-full my-auto text-center">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE DIVERGENT TRAILS --+</div>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- YOUR PATH DIVERGES --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Crossroads</h1>
             <p className="text-amber-400/60 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The path diverges in the gloom. Choose your next encounter.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
               {crossroadsOptions.map(eId => {
                 const details: Record<string, { title: string; desc: string; icon: React.ReactNode }> = {
-                  'campfire': { title: 'Campfire', desc: 'Warm a beast by the crackling flame.', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'altar': { title: 'Mystical Altar', desc: 'Surrender a creature to transfer its sigils.', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'carving': { title: 'Totem Carvings', desc: 'Choose a tribal lineage carving blindly.', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'cost': { title: 'Costly Bargain', desc: 'Strike a pact based on blood or bone cost.', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'bonelord': { title: 'The Bone Lord', desc: 'Offer a sacrifice to earn starting bones.', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'mycologist': { title: 'Mycologists', desc: 'Fuse duplicate specimens into a hybrid.', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'goobert': { title: 'Goo Mage', desc: 'Bottle a duplicate from bubbling slime.', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
-                  'cave': { title: 'The Cave', desc: 'Test 3 drawn cards against trials for a reward.', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'choice': { title: 'Wild Beasts', desc: 'Take a new creature from the cache.', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'totem': { title: 'The Weaver', desc: 'Assemble a tribal Head and Base sigil.', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'campfire': { title: 'Divine Blessing', desc: 'Allow the Zealot to Baptize a Creature, empowering it.', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'altar': { title: 'Mystical Altar', desc: 'Surrender a Creature to the Maker to transfer its Crests.', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'carving': { title: 'Woven Patches', desc: 'A Creature from the chosen Tribal Crest heeds your call.', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'cost': { title: 'Merchant Off', desc: 'The Merchant offers one on the house, of blood or bone cost.', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'bonelord': { title: 'Bloodrites', desc: 'The Old One demands a sacrifice, granting you a Blessing.', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
+                  'mycologist': { title: 'Stitched Anew', desc: 'Allow the Weaver to sew duplicate cards together.', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'goobert': { title: 'Printing Press', desc: 'The Begotten offers to Stamp a card.', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
+                  'cave': { title: 'The Steeple', desc: 'The Zealot tests if your Creatures are worthy.', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
+                  'choice': { title: 'Wild Creatures', desc: 'A group of Creatures approach from the darkness.', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'totem': { title: 'The Weaver', desc: 'Assemble an Effigy from a Tribe Patch and Crest.', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
                 };
                 const d = details[eId] || { title: 'Unknown', desc: 'A mysterious path.', icon: <Sparkles className="w-5 h-5" /> };
 
@@ -6587,7 +6623,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S WEFT --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Embroidered Crests</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              Threadbare swatches rest upon the loom. Claiming an embroidered crest will summon a creature of its tribe.
+              Threadbare swatches rest upon a lone loom. Claiming an embroidered Patch will summon a creature of its tribe.
             </p>
 
             <div className="flex flex-wrap gap-6 justify-center max-w-2xl mb-8">
@@ -6696,14 +6732,14 @@ export default function App() {
       {screen === 'EVENT_MYCOLOGIST' && (
         <div className="absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE MYCOLOGISTS --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Spore Grafting</h1>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER SCOFFS --+</div>
+            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">SLEIGHT OF HAND</h1>
 
             {!mycoHasDuplicates ? (
               <div className="flex flex-col items-center text-center max-w-lg my-auto">
                 <p className="text-amber-400/70 text-xs mb-8 leading-relaxed">
-                  The surgeons rummage through your satchel... <span className="text-amber-300 font-bold uppercase">No duplicate specimens exist!</span><br />
-                  Yet the mycelium hunger. They present a cloned specimen of your most powerful beast:
+                  The Weaver rummages through your satchel... <span className="text-amber-300 font-bold uppercase">No twin creatures with you?</span><br />
+                  Yet the threads whisper to her... a flick of the wrist and a twin card appears in her hand, before being stuffed back into your satchel:
                 </p>
                 {mycoOfferedCard && (
                   <div className="mb-8 scale-110">
@@ -6714,13 +6750,13 @@ export default function App() {
                   onClick={claimMycologistDuplicate}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
-                  ACCEPT HYBRID SPECIMEN
+                  COMMIT TO YOUR ACTIONS
                 </button>
               </div>
             ) : (
               <>
                 <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-                  Two masked figures peer through surgical visors. Select two creatures with the exact same name to fuse their power.
+                  The wretched Weaver glances over her shoulder without halting her spinning loom. She beckons you closer, hand outstreched and palm open.
                 </p>
 
                 <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
@@ -6758,7 +6794,7 @@ export default function App() {
                     disabled={mycoSelectedIndices.length !== 2 || masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name}
                     className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                   >
-                    FUSE SPECIMENS
+                    SEW CREATURES
                   </button>
                 </div>
               </>
@@ -6776,7 +6812,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- GOO MAGE GOOBERT --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-teal-300 mb-1">Slime Cloning</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              Goobert gurgles warmly behind a vat of green sludge. Select a creature from your deck to replicate.
+              The Begotten jeers and scoffs at any who question his Stamps and the quality of his Press. Allow him to demonstrate.
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
@@ -6802,7 +6838,7 @@ export default function App() {
                 disabled={goobertSelectedIdx === null}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
-                EXTRACT DUPLICATE
+                STAMP YOUR CARD
               </button>
             </div>
           </div>
@@ -6821,7 +6857,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE CAVE TRIAL --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-stone-200 mb-1">The Cavern Trials</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              Three trials lie in darkness. 3 cards will be drawn from your deck to meet the challenge.
+              The Zealot lays out the Trials of the Flock. 3 Creatures will be tested for their devotion, and Blessing imparted if they succeed.
             </p>
 
             {!caveSelectedTrial ? (
@@ -6836,7 +6872,7 @@ export default function App() {
                       {t}
                     </div>
                     <div className="font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] mt-1 transition-all">
-                      TEST TRIAL
+                      TRIAL OF THE FLOCK
                     </div>
                   </div>
                 ))}
@@ -6854,7 +6890,7 @@ export default function App() {
 
                 {cavePassed && (
                   <div className="w-full flex flex-col items-center mb-6">
-                    <p className="text-xs font-mono text-amber-400/70 mb-4 uppercase tracking-wider">Claim a rewarded beast carrying an extra sigil:</p>
+                    <p className="text-xs font-mono text-amber-400/70 mb-4 uppercase tracking-wider">The Zealot offers a Blessed Creature:</p>
                     <div className="flex gap-4 justify-center">
                       {caveRewardCards.map((c, idx) => (
                         <div
@@ -6905,7 +6941,7 @@ export default function App() {
             {totemStage === 'REWARD' ? (
               <>
                 <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-                  Claim an Embroidered Patch or Threadbound Sigil to bind to your effigy.
+                  Claim an Tribal Patch or Threadbound Crest to bind to your Effigy.
                 </p>
 
                 <div className="flex gap-6 justify-center max-w-2xl mb-8">
@@ -6920,7 +6956,7 @@ export default function App() {
                       }`}
                     >
                       <div className="text-[9px] text-[#ab8a68] uppercase font-mono tracking-widest mb-1.5">
-                        {tc.type === 'head' ? 'Head Patch' : 'Torso Sigil'}
+                        {tc.type === 'head' ? 'Tribal Patch' : 'Torso Crest'}
                       </div>
 
                       <div className="w-14 h-14 bg-[#20150d] border border-[#4a3422] rounded-[2px] flex items-center justify-center p-1.5 mb-2">
@@ -6980,7 +7016,7 @@ export default function App() {
             ) : (
               <div className="flex flex-col items-center max-w-2xl w-full my-auto text-center">
                 <p className="text-amber-400/70 text-xs mb-8 max-w-md uppercase tracking-wider">
-                  Multiple remnants rest within your kit. Bind your active Effigy by choosing one Head Patch and one Torso Sigil:
+                  Multiple remnants rest within your kit. Bind your active Effigy by choosing one Tribal Patch and one Torso Crest:
                 </p>
 
                 <div className="w-full border-t border-b border-amber-950/40 py-6 mb-8 flex flex-col gap-6">
@@ -7010,14 +7046,14 @@ export default function App() {
                           );
                         })
                       ) : (
-                        <span className="text-xs font-mono text-stone-600 italic">No Head Patches collected yet.</span>
+                        <span className="text-xs font-mono text-stone-600 italic">No Tribal Patches collected yet.</span>
                       )}
                     </div>
                   </div>
 
                   {/* Available Torso Sigils */}
                   <div>
-                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Torso Sigils:</div>
+                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Torso Crests:</div>
                     <div className="flex flex-wrap gap-3 justify-center">
                       {totemPieces.filter(p => p.type === 'body').length > 0 ? (
                         totemPieces.map((p, pIdx) => {
@@ -7046,7 +7082,7 @@ export default function App() {
                           );
                         })
                       ) : (
-                        <span className="text-xs font-mono text-stone-600 italic">No Torso Sigils collected yet.</span>
+                        <span className="text-xs font-mono text-stone-600 italic">No Torso Crests collected yet.</span>
                       )}
                     </div>
                   </div>
@@ -7132,7 +7168,7 @@ export default function App() {
           <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DECK REINFORCEMENT --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Wild Beasts</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">A trio of feral denizens emerges. Select one to bond to your deck.</p>
+            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">A trio of feral denizens emerges. Select one Creature to accompany you.</p>
 
             {/* Handheld 3-card fanning spread directly on the dark surface */}
             <div className="relative flex items-center justify-center w-full h-[220px] mb-8 select-none group">
@@ -7180,7 +7216,7 @@ export default function App() {
                   onClick={rerollCardChoice}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
-                  REROLL ({choiceRerollsLeft} LEFT)
+                  RUB YOUR EYES ({choiceRerollsLeft} LEFT)
                 </button>
               )}
             </div>
@@ -7194,9 +7230,9 @@ export default function App() {
       {screen === 'EVENT_HOARDER_SEARCH' && (
         <div className={`absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto font-mono select-none ${menuFadingOut ? 'animate-menu-fade-out' : 'animate-menu-fade-in'}`}>
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- HOARDER RETRIEVAL --+</div>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- SLEIGHT OF HAND --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Hoarder Search</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">Select any creature from your deck to draw directly into your hand.</p>
+            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The Weaver taught you well. Select any creature from your deck to add to your hand.</p>
 
             <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-6">
               {deck.map((c, idx) => {
@@ -7250,7 +7286,7 @@ export default function App() {
                 Your Creatures Huddle Closely Together…
               </h1>
               <p className="text-xs text-amber-400/60 uppercase tracking-wider mt-1">
-                {masterDeck.length} Beasts in Master Deck
+                {masterDeck.length} Creatures in your Deck
               </p>
               <button
                 onClick={() => setScreen(previousScreen || 'DUEL')}
@@ -7838,7 +7874,7 @@ export default function App() {
           >
               <div className="p-4 sm:p-5 rounded border border-[#8c6747]/80 bg-[#120c08]/95 shadow-[0_8px_25px_rgba(0,0,0,0.95)] flex flex-col items-center text-center font-mono w-full">
                 <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-2">
-                  {isTutorialDuel ? `+-- RULES OF THE CABIN (${dialogueTotalSteps - dialogueQueue.length}/${dialogueTotalSteps}) --+` : '+-- OCCULT WHISPERS --+'}
+                  {isTutorialDuel ? `+-- THEMS THE RULES (${dialogueTotalSteps - dialogueQueue.length}/${dialogueTotalSteps}) --+` : '+-- OCCULT WHISPERS --+'}
                 </div>
                 <p className="text-sm sm:text-base italic font-mono text-amber-100 mb-3 leading-snug">
                   "{bossState.activeDialogue}"
@@ -8778,7 +8814,7 @@ export default function App() {
         <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-[92%] max-w-md pointer-events-auto select-none">
           <div className="p-4 sm:p-5 rounded border border-[#8c6747]/80 bg-[#120c08]/95 shadow-[0_8px_25px_rgba(0,0,0,0.95)] flex flex-col items-center text-center font-mono w-full">
             <div className="text-[10px] text-amber-700/80 uppercase tracking-widest mb-1.5">
-              {modalAlert.isWin ? '+-- SACRIFICIAL TRIUMPH --+' : '+-- THE SCALES FELL --+'}
+              {modalAlert.isWin ? '+-- THY CUP RUNNETH OVER --+' : '+-- I HOPE THIS HURTS --+'}
             </div>
             <h2 className={`text-lg sm:text-xl font-mono font-bold uppercase tracking-widest mb-2 ${
               modalAlert.isWin ? 'text-amber-200' : 'text-red-400'
