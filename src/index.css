@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
 @layer base {
-  html, body {
+  html, body, #root {
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
+    height: 100dvh;
     overflow: hidden;
     background-color: #050811;
     color: #e2e8f0;
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    overscroll-behavior: none;
   }
 }
 
@@ -20,16 +23,17 @@
 
 #game-viewport {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   margin: 0;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: #04060a; /* Dark background letterboxing */
+  background-color: #04060a;
   position: relative;
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 #game-container {
@@ -42,9 +46,9 @@
   position: relative;
   overflow: hidden;
   transform-origin: center center;
-  /* Centered Scaling using CSS transform: scale(min(scaleX, scaleY)) */
+  /* Centered Scaling using dynamic viewport units for mobile */
   --scale-x: calc(100vw / 1280px);
-  --scale-y: calc(100vh / 720px);
+  --scale-y: calc(100dvh / 720px);
   transform: scale(var(--active-scale, min(var(--scale-x), var(--scale-y))));
   flex-shrink: 0;
   user-select: none;

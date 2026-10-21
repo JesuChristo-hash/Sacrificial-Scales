@@ -30,3 +30,4 @@ git commit -m "chore: sync stable build" -q
 git push origin main
 
 echo [✓] Deployment complete. Site will reflect changes shortly.
+pause

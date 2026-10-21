@@ -8921,6 +8921,17 @@ export default function App() {
           </div>
         )}
       </div>
+    {/* Mobile Orientation Blocker */}
+      <div className="fixed inset-0 z-[9999] bg-[#04060a] flex flex-col items-center justify-center text-amber-100 p-6 text-center portrait:flex landscape:hidden select-none pointer-events-auto">
+        <div className="text-4xl mb-4 font-mono animate-pulse">⤹ 📱</div>
+        <p className="font-serif text-sm tracking-[0.2em] uppercase text-stone-300 mb-2">
+          Ritual Requires Landscape
+        </p>
+        <p className="font-mono text-[10px] tracking-widest uppercase text-stone-500">
+          Rotate your device to enter the board
+        </p>
+      </div>
+
     </div>
   );
 }
