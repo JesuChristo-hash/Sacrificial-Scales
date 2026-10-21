@@ -4987,10 +4987,10 @@ export default function App() {
     triggerSfx('play');
 
     setModalAlert({
-      title: "SOLITARY SPECIMEN CLONED",
-      message: `The Mycologists examined your satchel: lacking duplicates, they cloned a pristine specimen of ${mycoOfferedCard.name} with its original stats and sigils!`,
+      title: "TWIN CREATURE ADDED",
+      message: `The Weaver stuffed a twin of ${mycoOfferedCard.name} into your deck!`,
       isWin: true,
-      btnText: "Take Duplicate Specimen",
+      btnText: "Venture Onwards",
       onAction: () => {
         setModalAlert(null);
         startNextDuel(undefined, nextDeck);
@@ -5046,17 +5046,17 @@ export default function App() {
     clone.id = `goobert-${Date.now()}`;
 
     const mutated = Math.random() < 0.5;
-    let desc = `Goobert created an exquisite replica of ${original.name}!`;
+    let desc = `The Press did indeed Stamp a pristine ${original.name}!`;
 
     if (mutated) {
       if (Math.random() < 0.5) {
         const delta = Math.random() < 0.5 ? 1 : -1;
         clone.attack = Math.max(0, (clone.attack || 0) + delta);
-        desc = `Goobert's slimy appendages slipped! ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
+        desc = `The Begotten slammed the Press shut. The Stamped ${original.name}'s attack shifted by ${delta > 0 ? '+1' : '-1'}.`;
       } else {
         const pool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
         clone.sigils = [pool[Math.floor(Math.random() * pool.length)]];
-        desc = `The green sludge warped ${original.name}'s mind, imbuing it with ${clone.sigils[0]}!`;
+        desc = `The Begotten's carelessness cut ${original.name}'s crest in the Press, he Stamped it with ${clone.sigils[0]} to "compensate!"`;
       }
     }
 
@@ -5065,10 +5065,10 @@ export default function App() {
     masterDeckRef.current = nextDeck;
     triggerSfx('play');
     setModalAlert({
-      title: "GOOBERT'S BUBBLING FLASK",
+      title: "THE BEGOTTEN SNEERS",
       message: desc,
       isWin: true,
-      btnText: "Bottle Creature",
+      btnText: "VENTURE ONWARD",
       onAction: () => {
         setModalAlert(null);
         startNextDuel(undefined, nextDeck);
@@ -6376,11 +6376,11 @@ export default function App() {
               className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               title={
                 draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0
-                  ? "You must trade all of your Trade Pelts before entering the woods"
-                  : "Enter the Woods"
+                  ? "You must trade all of your Pelts before venturing further"
+                  : "Venture Onward"
               }
             >
-              ENTER THE WOODS
+              VENTURE ONWARD
             </button>
           </div>
         </div>
@@ -6415,23 +6415,23 @@ export default function App() {
           <div className="flex flex-col items-center justify-center max-w-3xl w-full my-auto text-center">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- YOUR PATH DIVERGES --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Crossroads</h1>
-            <p className="text-amber-400/60 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The path diverges in the gloom. Choose your next encounter.</p>
+            <p className="text-amber-400/60 text-xs mb-8 text-center max-w-md uppercase tracking-wider">The path diverges in the gloom. Your options are grim.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
               {crossroadsOptions.map(eId => {
                 const details: Record<string, { title: string; desc: string; icon: React.ReactNode }> = {
-                  'campfire': { title: 'Divine Blessing', desc: 'Allow the Zealot to Baptize a Creature, empowering it.', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'altar': { title: 'Mystical Altar', desc: 'Surrender a Creature to the Maker to transfer its Crests.', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'carving': { title: 'Woven Patches', desc: 'A Creature from the chosen Tribal Crest heeds your call.', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'cost': { title: 'Merchant Off', desc: 'The Merchant offers one on the house, of blood or bone cost.', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'bonelord': { title: 'Bloodrites', desc: 'The Old One demands a sacrifice, granting you a Blessing.', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'mycologist': { title: 'Stitched Anew', desc: 'Allow the Weaver to sew duplicate cards together.', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'goobert': { title: 'Printing Press', desc: 'The Begotten offers to Stamp a card.', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
-                  'cave': { title: 'The Steeple', desc: 'The Zealot tests if your Creatures are worthy.', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
-                  'choice': { title: 'Wild Creatures', desc: 'A group of Creatures approach from the darkness.', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
-                  'totem': { title: 'The Weaver', desc: 'Assemble an Effigy from a Tribe Patch and Crest.', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'campfire': { title: 'Divine Blessing', desc: 'Allow the Zealot to Baptize a Creature, empowering it', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'altar': { title: 'Mystical Altar', desc: 'Surrender a Creature to the Maker to transfer its Crests', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'carving': { title: 'Woven Patches', desc: 'A Creature from the chosen Tribal Crest heeds your call', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'cost': { title: 'Merchant Offering', desc: 'The Merchant offers one on the house', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'bonelord': { title: 'Bloodrites', desc: 'The Old One demands a sacrifice, granting you a Blessing', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
+                  'mycologist': { title: 'Stitched Anew', desc: 'Allow the Weaver to sew duplicate cards together', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'goobert': { title: 'Printing Press', desc: 'The Begotten offers to Stamp a card', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
+                  'cave': { title: 'The Steeple', desc: 'The Zealot tests if your Creatures are worthy', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
+                  'choice': { title: 'Wild Creatures', desc: 'A group of Creatures approach from the darkness', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'totem': { title: 'The Weaver', desc: 'Assemble an Effigy from a Tribe Patch and Crest', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
                 };
-                const d = details[eId] || { title: 'Unknown', desc: 'A mysterious path.', icon: <Sparkles className="w-5 h-5" /> };
+                const d = details[eId] || { title: 'Unknown', desc: 'The path ahead lies in darkness.', icon: <Sparkles className="w-5 h-5" /> };
 
                 return (
                   <div
@@ -6475,14 +6475,14 @@ export default function App() {
           style={getScreenBgStyle('campfireevent.jpg')}
         >
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- CAMPFIRE --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Crackling Flame</h1>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DIVINE BLESSING --+</div>
+            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">BABTISM OF BOILIING BLOOD</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
               {campfireStage === 0
-                ? "Select a creature to warm by the crackling flame."
+                ? "The Zealot's wicked smile sickens you. Select a creature to babtize in the boiling blood."
                 : isCampfireSafe
-                ? "The campfire is deserted. You may warm your beast again with zero risk."
-                : "The hungry survivors gather in shadows... Warm it a second time? There is a 50% risk they devour it."}
+                ? "The chapel is deserted. You may bathe your Creatures in blood an additional time."
+                : "The Zealot murmurs about the hunger growing in his Flock..."}
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
@@ -6509,15 +6509,15 @@ export default function App() {
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
                 {campfireStage === 0
-                  ? `WARM BEAST (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`
-                  : `RISK WARMING AGAIN (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`}
+                  ? `BABPTIZE CREATURE (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`
+                  : `BATHE IN THE BLOOD (${campfireBuffType === 'attack' ? '+1 POWER' : '+2 HEALTH'})`}
               </button>
               {campfireStage > 0 && (
                 <button
                   onClick={() => startNextDuel()}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
-                  STEP AWAY
+                  FLEE
                 </button>
               )}
             </div>
@@ -6534,10 +6534,10 @@ export default function App() {
           style={getScreenBgStyle('altarevent.jpg')}
         >
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- MYSTICAL ALTAR --+</div>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- CRESTFALLEN ALTAR --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Sigil Transfer</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              Select a Host to receive sigils, and a Sacrifice to surrender its power forever.
+              Select a Host to receive the Crests of a chosen Sacrifice. Greed begets you.
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
@@ -6562,7 +6562,7 @@ export default function App() {
                     onClick={() => {
                       if (!altarHostId) {
                         if (cannotBeHost) {
-                          addLog(`${c.name} cannot receive more sigils: it already bears more than its original nature allows.`);
+                          addLog(`${c.name} cannot receive more crests: it already bears more than its original nature allows.`);
                           return;
                         }
                         setAltarHostId(c.id || null);
@@ -6571,7 +6571,7 @@ export default function App() {
                         setAltarSacrificeId(null);
                       } else if (!altarSacrificeId) {
                         if (wouldExceedFive) {
-                          addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more sigils (max 4 allowed).`);
+                          addLog(`Cannot sacrifice ${c.name}: ${hostCard?.name} would have 5 or more crests (max 4 allowed).`);
                           return;
                         }
                         if (c.sigils && c.sigils.length > 0) {
@@ -6604,7 +6604,7 @@ export default function App() {
                 disabled={!altarHostId || !altarSacrificeId}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
-                SACRIFICE & TRANSFER
+                SACRIFICE TO THE MAKER
               </button>
             </div>
           </div>
@@ -6623,7 +6623,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER'S WEFT --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Embroidered Crests</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              Threadbare swatches rest upon a lone loom. Claiming an embroidered Patch will summon a creature of its tribe.
+              Threadbare swatches rest upon a lone loom. Claiming an embroidered Patch will summon a creature of its Tribe.
             </p>
 
             <div className="flex flex-wrap gap-6 justify-center max-w-2xl mb-8">
@@ -6661,10 +6661,10 @@ export default function App() {
           style={getScreenBgStyle('costeventbg.jpg')}
         >
           <div className="max-w-xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- COSTLY BARGAIN --+</div>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- FREE OF COST --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Blood & Bone Pact</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              Unseen forces extend a blind bargain based on its sacrifices.
+              The Merchant's dozed off. Try helping yourself to a freebie.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
@@ -6702,7 +6702,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE BONE LORD --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-stone-200 mb-1">Ancient Altar of Bones</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-              A sudden flooding darkness envelopes the world around you. You must offer a sacrifice from your master deck to receive his eternal favor.
+              A sudden flooding darkness envelopes the world around you. You must offer a Sacrifice from your deck to receive his eternal favor.
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
@@ -6809,8 +6809,8 @@ export default function App() {
       {screen === 'EVENT_GOOBERT' && (
         <div className="absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
-            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- GOO MAGE GOOBERT --+</div>
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-teal-300 mb-1">Slime Cloning</h1>
+            <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- PRINTING PRESS --+</div>
+            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-teal-300 mb-1">STAMP-a-TWIN</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
               The Begotten jeers and scoffs at any who question his Stamps and the quality of his Press. Allow him to demonstrate.
             </p>
@@ -7168,7 +7168,7 @@ export default function App() {
           <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DECK REINFORCEMENT --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Wild Beasts</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">A trio of feral denizens emerges. Select one Creature to accompany you.</p>
+            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">A trio of feral denizens emerge. Select one Creature to accompany you.</p>
 
             {/* Handheld 3-card fanning spread directly on the dark surface */}
             <div className="relative flex items-center justify-center w-full h-[220px] mb-8 select-none group">
