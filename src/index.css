@@ -1,0 +1,584 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #050811;
+    color: #e2e8f0;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    user-select: none;
+  }
+}
+
+/* =========================================================================
+   1. MASTER SCALER & CENTERED SCALING (1280x720 / 16:9 REFERENCE CANVAS)
+   ========================================================================= */
+
+#game-viewport {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #04060a; /* Dark background letterboxing */
+  position: relative;
+  touch-action: none;
+}
+
+#game-container {
+  width: 1280px;
+  height: 720px;
+  min-width: 1280px;
+  max-width: 1280px;
+  min-height: 720px;
+  max-height: 720px;
+  position: relative;
+  overflow: hidden;
+  transform-origin: center center;
+  /* Centered Scaling using CSS transform: scale(min(scaleX, scaleY)) */
+  --scale-x: calc(100vw / 1280px);
+  --scale-y: calc(100vh / 720px);
+  transform: scale(var(--active-scale, min(var(--scale-x), var(--scale-y))));
+  flex-shrink: 0;
+  user-select: none;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+}
+
+/* Custom Game Animations */
+@keyframes hit-shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 2px); }
+  40% { transform: translate(4px, -3px); }
+  60% { transform: translate(-3px, -2px); }
+  80% { transform: translate(3px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+.animate-shake {
+  animation: hit-shake 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes player-strike-lunge {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-28px) scale(1.1); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  100% { transform: translateY(0); }
+}
+.animate-player-strike {
+  animation: player-strike-lunge 0.85s ease-in-out;
+  border-color: #38bdf8 !important;
+  z-index: 40 !important;
+}
+
+@keyframes player-strike-lunge-left {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-38px, -28px) scale(1.1) rotate(-8deg); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-player-strike-left {
+  animation: player-strike-lunge-left 0.85s ease-in-out;
+  border-color: #38bdf8 !important;
+  z-index: 40 !important;
+}
+
+@keyframes player-strike-lunge-right {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(38px, -28px) scale(1.1) rotate(8deg); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-player-strike-right {
+  animation: player-strike-lunge-right 0.85s ease-in-out;
+  border-color: #38bdf8 !important;
+  z-index: 40 !important;
+}
+
+@keyframes enemy-strike-lunge {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(28px) scale(1.1); box-shadow: 0 0 28px rgba(239, 68, 68, 0.95); }
+  100% { transform: translateY(0); }
+}
+.animate-enemy-strike {
+  animation: enemy-strike-lunge 0.85s ease-in-out;
+  border-color: #ef4444 !important;
+  z-index: 40 !important;
+}
+
+@keyframes enemy-strike-lunge-left {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-38px, 28px) scale(1.1) rotate(8deg); box-shadow: 0 0 28px rgba(239, 68, 68, 0.95); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-enemy-strike-left {
+  animation: enemy-strike-lunge-left 0.85s ease-in-out;
+  border-color: #ef4444 !important;
+  z-index: 40 !important;
+}
+
+@keyframes enemy-strike-lunge-right {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(38px, 28px) scale(1.1) rotate(-8deg); box-shadow: 0 0 28px rgba(239, 68, 68, 0.95); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-enemy-strike-right {
+  animation: enemy-strike-lunge-right 0.85s ease-in-out;
+  border-color: #ef4444 !important;
+  z-index: 40 !important;
+}
+
+@keyframes card-draw {
+  0% { transform: translateY(35px) scale(0.85); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.animate-card-draw {
+  animation: card-draw 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sacrifice-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-2px, 1px) rotate(-1.5deg); }
+  50% { transform: translate(2px, -1px) rotate(1.5deg); }
+  75% { transform: translate(-1px, 2px) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-sacrifice-shake {
+  animation: sacrifice-shake 0.35s infinite;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.75) !important;
+}
+
+@keyframes hp-flash {
+  0% { background-color: #ef4444; color: white; transform: scale(1.4); box-shadow: 0 0 12px #ef4444; z-index: 20; }
+  100% { background-color: #0f1115; color: white; transform: scale(1); box-shadow: none; z-index: 10; }
+}
+.hp-flash {
+  animation: hp-flash 0.5s ease-out forwards;
+}
+
+@keyframes text-flash {
+  0% { color: #ef4444; transform: scale(1.3); text-shadow: 0 0 8px #ef4444; }
+  100% { color: #d1d5db; transform: scale(1); text-shadow: none; }
+}
+.text-flash {
+  animation: text-flash 0.5s ease-out forwards;
+  display: inline-block;
+}
+
+@keyframes phase-flash {
+  0% { color: #c026d3; transform: scale(1); text-shadow: none; }
+  20% { color: #facc15; transform: scale(1.4); text-shadow: 0 0 14px #facc15; }
+  50% { color: #c026d3; transform: scale(1); text-shadow: none; }
+  100% { color: #c026d3; transform: scale(1); text-shadow: none; }
+}
+.animate-phase-flash {
+  animation: phase-flash 3.5s ease-in-out forwards;
+  display: inline-block;
+}
+
+@keyframes swipe-up-fade {
+  0% { clip-path: inset(0 0 0 0); opacity: 1; transform: translateY(0); }
+  100% { clip-path: inset(0 0 100% 0); opacity: 0; transform: translateY(-8px); }
+}
+.animate-destroy {
+  animation: swipe-up-fade 0.45s ease-in forwards !important;
+}
+
+/* Gauge Rumble Animation */
+@keyframes scale-rumble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-3px, 1.5px) rotate(-1deg); }
+  40% { transform: translate(3px, -2px) rotate(1deg); }
+  60% { transform: translate(-2px, -1px) rotate(-0.5deg); }
+  80% { transform: translate(2px, 1.5px) rotate(0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-scale-rumble {
+  animation: scale-rumble 0.35s ease-in-out both;
+}
+
+/* Upwards Fade Screen Transition */
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Custom Scrollbar for eerie atmosphere */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 17, 21, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* =========================================================================
+   COMBAT ANIMATION SPECIFICATIONS
+   ========================================================================= */
+
+/* Front-Row Direct Summon: Vertical bottom-to-top reveal over ~0.3s with rising threshold edge glow */
+@keyframes summon-vertical-wipe {
+  0% {
+    clip-path: inset(100% 0 0 0 round 0.5rem);
+    opacity: 0.15;
+  }
+  30% {
+    opacity: 0.65;
+  }
+  70% {
+    opacity: 0.95;
+  }
+  100% {
+    clip-path: inset(0% 0 0 0 round 0.5rem);
+    opacity: 1;
+  }
+}
+
+@keyframes summon-threshold-rise {
+  0% {
+    top: 100%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.95;
+  }
+  100% {
+    top: 0%;
+    opacity: 0;
+  }
+}
+
+.animate-summon-wipe {
+  animation: summon-vertical-wipe 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  will-change: clip-path, opacity;
+  position: relative;
+}
+
+.animate-summon-wipe::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 5px;
+  top: 100%;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0) 0%,
+    rgba(125, 211, 252, 0.8) 18%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(125, 211, 252, 0.8) 82%,
+    rgba(56, 189, 248, 0) 100%
+  );
+  box-shadow:
+    0 2px 8px 1px rgba(56, 189, 248, 0.85),
+    0 4px 16px 2px rgba(14, 165, 233, 0.5);
+  animation: summon-threshold-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+/* Card Damaged: 0.15s shake animation and red hue flash */
+@keyframes card-damage-shake {
+  0% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+  }
+  20% {
+    transform: translate(-5px, 2px);
+    filter: brightness(1.6) drop-shadow(0 0 10px rgba(239, 68, 68, 0.9)) saturate(1.8);
+  }
+  40% {
+    transform: translate(5px, -3px);
+    filter: brightness(1.9) drop-shadow(0 0 14px rgba(239, 68, 68, 1)) saturate(2.2);
+  }
+  60% {
+    transform: translate(-4px, 3px);
+    filter: brightness(1.5) drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+  }
+  80% {
+    transform: translate(3px, -2px);
+    filter: brightness(1.2) drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+  }
+  100% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+  }
+}
+.animate-damage-shake {
+  animation: card-damage-shake 0.15s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+  border-color: #ef4444 !important;
+  z-index: 45 !important;
+}
+
+/* Card Destroyed: Upward vertical wipe/dissolve (translateY(-15px) + opacity fade out over 0.2s) */
+@keyframes card-destroy-dissolve {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  100% {
+    transform: translateY(-15px);
+    opacity: 0;
+    filter: brightness(0.4) blur(1px);
+  }
+}
+.animate-destroy-dissolve {
+  animation: card-destroy-dissolve 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+/* Direct Player/Enemy Damage: Screen-rumble shake applied across all board zones for 0.2s */
+@keyframes board-screen-rumble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-6px, 3px) rotate(-0.6deg); }
+  40% { transform: translate(6px, -4px) rotate(0.6deg); }
+  60% { transform: translate(-4px, -2px) rotate(-0.3deg); }
+  80% { transform: translate(3px, 3px) rotate(0.3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-board-rumble {
+  animation: board-screen-rumble 0.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+/* Sigil / Hidden Trigger: 0.1s rapid micro-jitter transform on activating card */
+@keyframes sigil-micro-jitter {
+  0% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-2px, 1.5px) scale(1.04); }
+  50% { transform: translate(2px, -2px) scale(1.04); }
+  75% { transform: translate(-1.5px, 1.5px) scale(1.02); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.animate-sigil-jitter {
+  animation: sigil-micro-jitter 0.1s ease-in-out both !important;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.85) !important;
+  z-index: 45 !important;
+}
+
+/* Waterborne (Submerged): persistent state class */
+.waterborne-submerged {
+  opacity: 0.75 !important;
+  filter: none !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.5) !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Attack Lunges & Recoil:
+   - Slower attack lunge with weight: forward lunge takes ~280ms (70% of 0.4s) with ease-out curve
+   - Return/recoil completes at 100% (0.4s)
+   - Targeted: ~20px toward target opposing zone vector (straight or diagonal)
+   - Empty Lane / Direct: 3x distance (60px) forward past opposing slot before recoiling
+   - Airborne: 60px forward, elevated z-index: 50, deep drop-shadow
+*/
+@keyframes lunge-p-straight {
+  0% { transform: translateY(0); }
+  70% { transform: translateY(-20px) scale(1.05); }
+  100% { transform: translateY(0); }
+}
+.animate-lunge-p-straight {
+  animation: lunge-p-straight 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-p-left {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  70% { transform: translate(-20px, -20px) scale(1.05) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-lunge-p-left {
+  animation: lunge-p-left 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-p-right {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  70% { transform: translate(20px, -20px) scale(1.05) rotate(5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-lunge-p-right {
+  animation: lunge-p-right 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-p-direct {
+  0% { transform: translateY(0); }
+  70% { transform: translateY(-60px) scale(1.08); box-shadow: 0 0 22px rgba(56, 189, 248, 0.85); }
+  100% { transform: translateY(0); }
+}
+.animate-lunge-p-direct {
+  animation: lunge-p-direct 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-p-airborne {
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+  70% { transform: translateY(-60px) scale(1.12); filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 18px rgba(147, 197, 253, 0.85)); }
+  100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+}
+.animate-lunge-p-airborne {
+  animation: lunge-p-airborne 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+/* Enemy Lunges */
+@keyframes lunge-e-straight {
+  0% { transform: translateY(0); }
+  70% { transform: translateY(20px) scale(1.04); }
+  100% { transform: translateY(0); }
+}
+.animate-lunge-e-straight {
+  animation: lunge-e-straight 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-e-left {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  70% { transform: translate(-20px, 20px) scale(1.04) rotate(5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-lunge-e-left {
+  animation: lunge-e-left 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-e-right {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  70% { transform: translate(20px, 20px) scale(1.04) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-lunge-e-right {
+  animation: lunge-e-right 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-e-direct {
+  0% { transform: translateY(0); }
+  70% { transform: translateY(60px) scale(1.08); box-shadow: 0 0 22px rgba(239, 68, 68, 0.85); }
+  100% { transform: translateY(0); }
+}
+.animate-lunge-e-direct {
+  animation: lunge-e-direct 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+@keyframes lunge-e-airborne {
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+  70% { transform: translateY(60px) scale(1.12); filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 18px rgba(248, 113, 113, 0.85)); }
+  100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+}
+.animate-lunge-e-airborne {
+  animation: lunge-e-airborne 0.4s cubic-bezier(0, 0, 0.2, 1) both;
+  z-index: 50 !important;
+}
+
+/* 0 Power Attack Shake Animation */
+@keyframes zero-power-shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 0); }
+  50% { transform: translate(3px, 0); }
+  75% { transform: translate(-2px, 0); }
+  100% { transform: translate(0, 0); }
+}
+.animate-zero-power-shake {
+  animation: zero-power-shake 0.35s ease-in-out both !important;
+}
+
+/* Bone Counter Emoji Shake Animation */
+@keyframes bone-emoji-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-2px, -2px) rotate(-15deg); }
+  40% { transform: translate(2px, 1px) rotate(15deg); }
+  60% { transform: translate(-2px, 1px) rotate(-10deg); }
+  80% { transform: translate(1px, -1px) rotate(10deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-bone-shake {
+  animation: bone-emoji-shake 0.3s ease-in-out both;
+  display: inline-block;
+}
+
+/* Enemy Lane Drop (Queue to Frontline) */
+.card-dropping-queue {
+  transform: translateY(108px) !important;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  z-index: 35 !important;
+}
+
+/* Opponent Backrow Entry Slide */
+@keyframes queueSlideIn {
+  0% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-queue-slide-in {
+  animation: queueSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Grizzly Wall */
+@keyframes grizzly-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-8px, -5px) rotate(-1.5deg); }
+  20%, 40%, 60%, 80% { transform: translate(8px, 5px) rotate(1.5deg); }
+}
+
+.animate-grizzly-shake {
+  animation: grizzly-shake 0.3s ease-in-out infinite;
+}
+
+/* Rustic Hand-Inked Typography */
+.font-hand {
+  font-family: 'Caveat', cursive, system-ui;
+}
+
+.font-brush {
+  font-family: 'Permanent Marker', cursive, system-ui;
+}
+
+/* Ambient Fire Embers Rising Animation */
+@keyframes ember-rise {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-110px) translateX(14px) scale(1.1);
+    opacity: 0;
+  }
+}
+.animate-ember {
+  animation: ember-rise linear infinite;
+}

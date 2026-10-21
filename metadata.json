@@ -1,0 +1,6 @@
+{
+  "name": "Sacrificial Scales",
+  "description": "An Inscryption-inspired tactical roguelike card game featuring blood sacrifices, bone economics, mythical totems, and scale-tipping battles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
