@@ -4763,12 +4763,12 @@ export default function App() {
         masterDeckRef.current = nextDeck;
         triggerSfx('defeat');
         setModalAlert({
-          title: "CONSUMED BY SURVIVORS",
+          title: "DROWNED BY THE ZEALOT",
           message: poisonedSurvivors
-            ? `The starving survivors rushed the flames and devoured ${targetCard.name}! Its Touch of Death poison eliminated every survivor. All future campfires are now safe!`
-            : `The starving survivors rushed the flames and devoured ${targetCard.name}! Nothing remains.`,
+            ? `The Zealot plunged the ${targetCard.name} into the boiling blood! Its Touch of Death poison eliminated the whole Flock. All future Babtisms are now safe!`
+            : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly.`,
           isWin: false,
-          btnText: "Flee Campfire",
+          btnText: "Flee the Chapel",
           onAction: () => {
             setModalAlert(null);
             startNextDuel(undefined, nextDeck);
