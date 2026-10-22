@@ -489,7 +489,6 @@ export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
   { name: "Skeleton", class: "No Class", attack: 1, health: 1, emoji: "💀", sigils: ["Brittle"] },
   { name: "Geist", class: "No Class", attack: 0, health: 7, emoji: "👻", sigils: ["Burrower", "Fledgling"], evolvesInto: "Ghast" },
   { name: "Ghast", class: "No Class", attack: 3, health: 9, emoji: "🌫️", sigils: ["Airborne", "Brittle"] },
-  { name: "Hooved Skeleton", class: "No Class", attack: 3, health: 5, emoji: "💀", sigils: ["Hefty"] },
   { name: "Skeleton Canine", class: "No Class", attack: 2, health: 2, emoji: "🦴", sigils: ["Double Strike"] },
   { name: "Exoskeleton", class: "No Class", attack: 1, health: 1, emoji: "🦂", sigils: ["Trifurcated Strike", "Brittle"] },
   { name: "Tortoise Shell", class: "No Class", attack: 1, health: 2, emoji: "🐢", sigils: ["Waterborne"] },
@@ -3211,7 +3210,7 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: "The grain splits... the threads tighten. Behold what the wood was keeping hidden.",
+              activeDialogue: "She drops the article she was working on... leaning in closer to focus exlusively on you.",
             }));
 
             addLog("=== THE WEAVER: PHASE 2 INITIALIZED ===");
@@ -3284,7 +3283,7 @@ export default function App() {
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: 'I... I painted new forms into the canvas for you...',
+              activeDialogue: 'Do you have the new ink for my Stamps? My printing Press would love for you to say no!',
             }));
             addLog("=== THE BEGOTTEN: PHASE 2 INITIALIZED ===");
             addLog(`The Begotten paints an Amoeba directly into lane ${targetCol + 1}!`);
@@ -4326,7 +4325,7 @@ export default function App() {
           phase: 1,
           phase1CardsPlayed: 0,
           skipNextPlayerTurn: false,
-          activeDialogue: 'I... I painted some cards for you...',
+          activeDialogue: 'My Stamps are of the highest quality, let me show you!',
           bgHex: '#082613',
           bgTransitionDuration: 2.5,
           isRitualComplete: false,
@@ -4843,7 +4842,7 @@ export default function App() {
     triggerSfx('sacrifice');
     setModalAlert({
       title: "RITUAL COMPLETE",
-      message: `${sacrifice.name} was surrendered to the stone. Its essence now empowers ${host.name}.`,
+      message: `${sacrifice.name} was surrendered to the Maker. Its essence now empowers ${host.name}.`,
       isWin: true,
       btnText: "Leave Altar",
       onAction: () => {
@@ -5280,15 +5279,13 @@ export default function App() {
     const isPlayer = !options?.isOpponent;
     const laneIndex = options?.laneIndex;
 
-    // 1. Define waterborne states FIRST so the colors and borders can safely read them
+    // 1. Waterborne states
     const isWaterborne = card.sigils?.includes('Waterborne') || false;
-    // Waterborne cards only submerge when it is the opposing side's attack phase
+    // Submerges strictly during the opponent's attack phase
     const isSubmergedActive =
       isWaterborne &&
       laneIndex !== undefined &&
-      !options?.isAttacking &&
       (options?.isOpponent ? phase !== 'ENEMY' : phase === 'ENEMY');
-    const waterborneClass = '';
 
     // 2. Totem logic (active battle screen: player totem & boss totem)
     const isPlayerTotemAffected = screen === 'DUEL' && isPlayer && !!(activeTotem?.head && activeTotem?.body && (card.class === activeTotem.head || card.class === "ALL Classes"));
@@ -5397,6 +5394,16 @@ export default function App() {
       zIndex: 35,
     } : {};
 
+    // Resurface animation plays strictly when entering owner's turn phase, never during combat
+    const waterborneClass =
+      !animClass &&
+      isWaterborne &&
+      !isSubmergedActive &&
+      laneIndex !== undefined &&
+      (options?.isOpponent ? phase === 'ENEMY' : phase === 'DRAW')
+        ? 'animate-flip-up'
+        : '';
+
     // Decoupled hover transform: static bounding box maintains layout, inner container scales smoothly
     const shouldHover = options?.isClickable !== false && !options?.disableHoverScale && !options?.isOpponent && !options?.isSelected;
 
@@ -5446,7 +5453,7 @@ export default function App() {
           } ${options?.customScale || ''}`}
         >
           <div
-            className={`relative w-full h-full box-border rounded-sm select-none overflow-hidden bg-cover bg-center transform-gpu origin-bottom ${
+            className={`relative w-full h-full box-border rounded-sm select-none overflow-visible bg-cover bg-center transform-gpu origin-bottom ${
               shouldHover
                 ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
                 : 'transition-transform duration-200 ease-out'
@@ -5456,6 +5463,43 @@ export default function App() {
               backgroundSize: '100% 100%',
             }}
           >
+            {/* Blood Moon Sigil Array with Hover Zoom (No Modal Tooltip) */}
+            <div className="absolute bottom-[22%] left-0 right-0 flex items-center justify-center gap-1 px-1 z-30 pointer-events-auto">
+              {(card.sigils || []).map((sigil: any, idx: number) => {
+                const sigilName = typeof sigil === 'string' ? sigil : sigil?.name || '';
+                const cleanKey = sigilName.toLowerCase().replace(/[\s_]+/g, '');
+                const iconSrc = typeof sigil === 'object' && sigil?.icon 
+                  ? sigil.icon 
+                  : (typeof (window as any).SIGIL_ICONS !== 'undefined' && (window as any).SIGIL_ICONS[sigilName])
+                    ? (window as any).SIGIL_ICONS[sigilName]
+                    : `${BASE}/assets/sigils/${sigilName.toLowerCase().replace(/\s+/g, '_')}.png`;
+
+                return (
+                  <div
+                    key={`${sigilName}-${idx}`}
+                    className="relative z-10 transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center cursor-default drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+                  >
+                    <img
+                      src={iconSrc}
+                      alt={sigilName}
+                      className="w-5 h-5 object-contain select-none pointer-events-none"
+                      onError={(e) => {
+                        // Fallback to text icon if PNG asset path differs
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        if (target.nextElementSibling) {
+                          (target.nextElementSibling as HTMLElement).style.display = 'block';
+                        }
+                      }}
+                    />
+                    <span className="hidden text-xs filter sepia-[0.8] select-none pointer-events-none">
+                      {(typeof (window as any).SIGIL_MAPPING !== 'undefined' && (window as any).SIGIL_MAPPING[sigilName]) || '⭐'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Dynamic Health Socket for Blood Moon */}
             <div className="absolute bottom-[4.2%] right-[5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
               <span className="font-['Cinzel',_serif] font-black text-sm text-red-500 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
@@ -5467,11 +5511,11 @@ export default function App() {
       );
     }
 
-    // Waterborne cards flip face-down showing the card back while submerged
+    // Waterborne cards flip face-down showing strictly the raw card back asset
     if (isSubmergedActive) {
       return (
         <div
-          key={card.id || `${card.name}-${options?.laneIndex ?? 0}`}
+          key={`${card.id || card.name}-submerged-${options?.laneIndex ?? laneIndex ?? 0}`}
           onClick={options?.onClick}
           style={cardStyle}
           className={`relative inline-block w-[112px] h-[160px] shrink-0 select-none ${
@@ -5479,7 +5523,7 @@ export default function App() {
           } ${options?.customScale || ''}`}
         >
           <div
-            className={`relative w-full h-full box-border rounded-sm select-none bg-contain bg-no-repeat bg-center overflow-hidden transform-gpu origin-bottom ${
+            className={`relative w-full h-full box-border rounded-sm select-none bg-contain bg-no-repeat bg-center overflow-hidden transform-gpu origin-bottom animate-flip-down ${
               shouldHover
                 ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
                 : 'transition-transform duration-200 ease-out'
@@ -5950,8 +5994,6 @@ export default function App() {
   </pre>
 </div>
 
-  {/* Existing BEGIN RITUAL button goes here */}
-
   {/* Persistent Bottom-Left Discord Link */}
   <a
     href="https://discordapp.com/invite/FwPgPW2RcR"
@@ -5981,9 +6023,15 @@ export default function App() {
                   setScreen('DECK_SELECT');
                 }
               }}
-              className="group mt-8 sm:mt-12 cursor-pointer bg-transparent border-0 p-0 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95"
-  >
-    <pre className="text-red-600 group-hover:text-red-400 font-bold animate-occult-pulse text-[3.2px] sm:text-[4.8px] md:text-[6.5px] lg:text-[8px] whitespace-pre font-mono leading-none select-none tracking-normal transition-colors duration-150 drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]">
+              className="group mt-8 cursor-pointer bg-transparent border-0 p-0 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center"
+            >
+              <pre 
+                style={{ 
+                  fontFamily: '"Courier New", Courier, monospace',
+                  letterSpacing: '0px'
+                }} 
+                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[7.5px] whitespace-pre leading-none select-none drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]"
+              >
 {`        ▀█████████▄     ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█      ███     ███    █▄     ▄████████  ▄█       
          ███    ███   ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███  ▀█████████▄ ███    ███   ███    ███ ███       
          ███    ███   ███    █▀    ███    █▀  ███▌ ███   ███        ███    ███ ███▌    ▀███▀▀██ ███    ███   ███    ███ ███       
@@ -6098,15 +6146,15 @@ export default function App() {
             <div className="text-4xl mb-2 filter sepia-[0.4]">{bossState.ritualEndedVoluntarily ? '🕯️' : '💀'}</div>
             
             <div className="text-[10px] text-red-700/80 uppercase tracking-widest mb-1">
-              {bossState.ritualEndedVoluntarily ? '+-- RITUAL CONCLUDED --+' : '+-- THE SCALES FELL --+'}
+              {bossState.ritualEndedVoluntarily ? '+-- RITUAL CONCLUDED --+' : '+-- CATASTROPHIC FAILURE --+'}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-red-500 mb-1">
-              {bossState.ritualEndedVoluntarily ? 'Ritual Sealed' : 'Sacrificial Defeat'}
+              {bossState.ritualEndedVoluntarily ? 'Ritual Finished' : 'The Old One Awaits You'}
             </h1>
             
             <div className="text-xs font-mono uppercase tracking-widest text-red-400/70 mb-8">
-              {bossState.ritualEndedVoluntarily ? 'The cycle remains sealed at your behest' : 'The scale tipped into the abyss'}
+              {bossState.ritualEndedVoluntarily ? 'The Ritual is finally completed' : 'Your Blood Runs Cold'}
             </div>
 
             {/* Stats directly on the dark surface with etched borders */}
@@ -6161,7 +6209,7 @@ export default function App() {
           <div className="max-w-sm w-full text-center relative border border-amber-950/60 p-6 bg-[#0c0805]">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- RITUAL PAUSED --+</div>
             <h2 className="text-xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">
-              Cabin Sanctuary
+              The Sanctuary
             </h2>
             <p className="text-[11px] text-amber-400/60 mb-6 uppercase tracking-wider">Audio & Ritual Controls</p>
 

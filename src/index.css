@@ -565,7 +565,38 @@
 .font-brush {
   font-family: 'Permanent Marker', cursive, system-ui;
 }
+/* Waterborne 3D Flip Transitions */
+@keyframes cardFlipDown {
+  0% {
+    transform: perspective(800px) rotateY(-90deg) scale(0.96);
+    filter: brightness(0.75);
+  }
+  100% {
+    transform: perspective(800px) rotateY(0deg) scale(1);
+    filter: brightness(1);
+  }
+}
 
+@keyframes cardFlipUp {
+  0% {
+    transform: perspective(800px) rotateY(90deg) scale(0.96);
+    filter: brightness(0.75);
+  }
+  100% {
+    transform: perspective(800px) rotateY(0deg) scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-flip-down {
+  animation: cardFlipDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  backface-visibility: hidden;
+}
+
+.animate-flip-up {
+  animation: cardFlipUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  backface-visibility: hidden;
+}
 /* Ambient Fire Embers Rising Animation */
 @keyframes ember-rise {
   0% {
