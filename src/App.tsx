@@ -2148,7 +2148,15 @@ export default function App() {
     const currentPBoard = customPBoard || playerBoard;
     const currentEBoard = customEBoard || enemyBoard;
 
-    if (card.tags?.includes('Ant')) {
+    if (card.sigils?.includes('Shadow')) {
+      // Under Shadow, base attack is locked to the swapped health value stored on the card.
+      // Dynamic base bonuses (Ant count, Lammergeier bones) do not double-dip.
+      base = card.attack || 0;
+    } else if (card.sigils?.includes('Shadow')) {
+      // Under Shadow, base attack is locked to the swapped health value stored on the card.
+      // Dynamic base bonuses (Ant count, Lammergeier bones) do not double-dip.
+      base = card.attack || 0;
+    } else if (card.tags?.includes('Ant')) {
       base = getAntCount(currentPBoard, currentEBoard) + (card.attack || 0);
     } else if (card.name === "Lammergeier") {
       base = (isPlayer !== false ? Math.floor((bones || 0) / 2) : 0) + (card.attack || 0);
@@ -3345,13 +3353,14 @@ export default function App() {
               currEQueue[queueCols[0] ?? 0] = cloneCard(treeCard, 0);
               currEQueue[queueCols[1] ?? 1] = cloneCard(ALL_CARD_LOOKUP['Skeleton'], 0);
 
-              // Apply Shadow sigil to all player cards: swap power & health
-              currPBoard = currPBoard.map(c => {
+              // Apply Shadow sigil to all player cards: swap power & health cleanly
+              currPBoard = currPBoard.map((c, idx) => {
                 if (!c) return null;
+                const currentEffectiveAttack = getCardAttack(c, idx, true, currPBoard, currEBoard);
                 return {
                   ...c,
-                  attack: c.health,
-                  health: c.attack,
+                  attack: Math.max(0, c.health || 0),
+                  health: Math.max(1, currentEffectiveAttack),
                   sigils: Array.from(new Set([...c.sigils, 'Shadow'])),
                 };
               });
@@ -5271,7 +5280,15 @@ export default function App() {
     setAssemblyBodyIdx(null);
 
     const tribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved"];
-    const sigils = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
+    const BANNED_TOTEM_SIGILS = new Set([
+      'Amorphous',
+      'Omnistrike',
+      'Shadow',
+      'Tidal Lock',
+      'Made of Stone',
+      'Blood Moon'
+    ]);
+    const sigils = Object.keys(SIGIL_MAPPING).filter(s => !BANNED_TOTEM_SIGILS.has(s));
 
     const choices: Array<{ type: 'head' | 'body'; value: string }> = [];
     while (choices.length < 3) {
@@ -5403,15 +5420,15 @@ export default function App() {
 
     // 3. Attack numbers
     const hasShadow = card.sigils?.includes('Shadow');
-    const displayAttack = hasShadow
-      ? (card.attack || 0)
-      : (!options?.isQueue && laneIndex !== undefined ? getCardAttack(card, laneIndex, isPlayer) : getCardAttack(card));
+    const displayAttack = !options?.isQueue && laneIndex !== undefined 
+      ? getCardAttack(card, laneIndex, isPlayer) 
+      : getCardAttack(card);
     const baseStatCompare = card.attack || 0;
-    const isBuffed = !hasShadow && baseStatCompare < displayAttack;
-    const isDebuffed = !hasShadow && baseStatCompare > displayAttack;
+    const isBuffed = baseStatCompare < displayAttack;
+    const isDebuffed = baseStatCompare > displayAttack;
 
     let isStinkyDebuffed = false;
-    if (!options?.isQueue && laneIndex !== undefined && !hasShadow) {
+    if (!options?.isQueue && laneIndex !== undefined) {
       const oppBoard = isPlayer ? enemyBoard : playerBoard;
       const oppCard = oppBoard[laneIndex] || oppBoard.find(c => c?.isMassive);
       if (oppCard?.sigils.includes('Stinky') && !card.sigils.includes('Made of Stone')) {
@@ -7735,12 +7752,13 @@ export default function App() {
                           return next;
                         });
                         setPlayerBoard(prev =>
-                          prev.map(c => {
+                          prev.map((c, idx) => {
                             if (!c) return null;
+                            const currentEffectiveAttack = getCardAttack(c, idx, true);
                             return {
                               ...c,
-                              attack: c.health,
-                              health: c.attack,
+                              attack: Math.max(0, c.health || 0),
+                              health: Math.max(1, currentEffectiveAttack),
                               sigils: Array.from(new Set([...c.sigils, 'Shadow'])),
                             };
                           })
