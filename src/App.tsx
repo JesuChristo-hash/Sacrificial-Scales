@@ -406,9 +406,9 @@ export const TRIBE_EMBROIDERY: Record<string, JSX.Element> = {
 };
 export const TOKEN_PELT: CardDef = { name: "Trade Pelt", class: "No Class", attack: 0, health: 1, cost: 0, emoji: "📜", isSacrifice: false, sigils: [] };
 export const TOKEN_BEE: CardDef = { name: "Bee", class: "Insect", attack: 1, health: 1, cost: 0, emoji: "🐝", isSacrifice: false, sigils: ["Airborne"] };
-export const CARD_STONE_WALL: CardDef = { id: 'stone_wall', name: 'Stone Wall', class: 'No Class', attack: 0, health: 4, cost: 0, boneCost: 0, emoji: '🏔️', sigils: [], unsacrificable: true };
-export const CARD_FELLED_TREE: CardDef = { id: 'felled_tree', name: 'Felled Tree', class: 'No Class', attack: 0, health: 2, cost: 0, boneCost: 0, emoji: '🌳', sigils: [], unsacrificable: true };
-export const CARD_GRIZZLY: CardDef = { name: "Grizzly", class: "No Class", attack: 4, health: 6, cost: 3, emoji: "🐻", sigils: [] };
+export const CARD_STONE_WALL: CardDef = { id: 'stone_wall', name: 'Stone Wall', class: 'No Class', attack: 0, health: 4, cost: 0, boneCost: 0, emoji: '🏔️', sigils: ["Made of Stone"], unsacrificable: true };
+export const CARD_FELLED_TREE: CardDef = { id: 'felled_tree', name: 'Felled Tree', class: 'No Class', attack: 0, health: 3, cost: 0, boneCost: 0, emoji: '🌳', sigils: ["Mighty Leap"], unsacrificable: true };
+export const CARD_GRIZZLY: CardDef = { name: "Grizzly", class: "No Class", attack: 4, health: 6, cost: 3, emoji: "🐻", sigils: ["Mighty Leap"] };
 
 export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Amoeba", class: "No Class", attack: 1, health: 2, boneCost: 2, emoji: "🦠", sigils: ["Amorphous"] },
@@ -1777,10 +1777,13 @@ export default function App() {
 
   // Draft State
   const [draftPlayerDeck, setDraftPlayerDeck] = useState<CardDef[]>([]);
-  const [draftTradePool, setDraftTradePool] = useState<CardDef[]>([]);
+  const [draftTradePool, setDraftTradePool] = useState<(CardDef | null)[]>([]);
   const [draftTradesLeft, setDraftTradesLeft] = useState<number>(2);
   const [draftSelectedDeckIdx, setDraftSelectedDeckIdx] = useState<number | null>(null);
   const [draftSelectedTradeIdx, setDraftSelectedTradeIdx] = useState<number | null>(null);
+  const [draftRevealedIndices, setDraftRevealedIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7]);
+  const [draftFlippingDown, setDraftFlippingDown] = useState<boolean>(false);
+  const [draftFlippingUp, setDraftFlippingUp] = useState<boolean>(false);
 
   // Crossroads & Event States
   const [crossroadsOptions, setCrossroadsOptions] = useState<string[]>([]);
@@ -3135,14 +3138,28 @@ export default function App() {
           await animateDirectDamageRumble();
 
           // Step gauge 1 point at a time with tick sound
+          let ventedThisStrike = 0;
           for (let pt = 0; pt < pAtk; pt++) {
-            currentScale += 1;
-            setScale(currentScale);
-            triggerSfx('hit');
-            await sleep(80);
+            // Arterial Shunt: On Turn 1, hydraulic pressure cannot force the column past +4.
+            // Excess volume diverts directly through the petcock into the banked ounce reservoir.
+            if (turnNumber === 1 && currentScale >= 4) {
+              ventedThisStrike += 1;
+              setTotalOverkillDamage(prev => (prev || 0) + 1);
+              triggerSfx('hit');
+              await sleep(60);
+            } else {
+              currentScale += 1;
+              setScale(currentScale);
+              triggerSfx('hit');
+              await sleep(80);
+            }
           }
 
-          addLog(`${pCard.name} struck the opponent directly for ${pAtk}!`);
+          if (ventedThisStrike > 0) {
+            addLog(`${pCard.name} struck for ${pAtk}! Arterial shunt held gauge at +4; vented ${ventedThisStrike} oz into reservoir.`);
+          } else {
+            addLog(`${pCard.name} struck the opponent directly for ${pAtk}!`);
+          }
         }
 
         // Sequential async pause between each hit
@@ -4504,54 +4521,38 @@ export default function App() {
     } else if (!isBoss && consecutiveOneTurnWins === 2) {
       const shuffledLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
       const playerLanes = shuffledLanes.slice(0, 2);
-      const opponentLanes = shuffledLanes.slice(2, 4);
-
-      opponentLanes.forEach((lane, idx) => {
-        initBoard[lane] = {
-          ...cloneCard(CARD_STONE_WALL),
-          id: `stone-wall-${Date.now()}-${idx}`
-        };
-      });
-
-      setPlayerBoard(prev => {
-        const next = Array.isArray(prev) ? [...prev] : [null, null, null, null];
-        playerLanes.forEach((lane, idx) => {
-          next[lane] = {
-            ...cloneCard(CARD_FELLED_TREE),
-            id: `felled-tree-${Date.now()}-${idx}`
+      } else if (!isBoss) {
+      // Natural Encounter Architecture: Woods and wetlands generate native obstacles
+      // Duels 1-2 remain clear; Encounter 3+ has a 45% chance to feature a terrain blocker
+      const hasTerrain = encounter >= 3 && Math.random() < 0.45;
+      if (hasTerrain) {
+        const terrainLane = Math.floor(Math.random() * 4);
+        // Only place terrain in an empty lane to avoid overwriting queued spawns
+        if (initBoard[terrainLane] === null) {
+          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          initBoard[terrainLane] = {
+            ...cloneCard(terrainCard),
+            id: `terrain-${Date.now()}-${terrainLane}`
           };
-        });
-        return next;
-      });
-
-      addLog("Anti-OTK: 2 Stone Walls on opponent front, 2 Felled Trees on player side!");
-    } else if (!isBoss && consecutiveOneTurnWins === 1) {
-      const opponentCenterLane = Math.random() < 0.5 ? 1 : 2;
-      initBoard[opponentCenterLane] = {
-        ...cloneCard(CARD_STONE_WALL),
-        id: `stone-wall-${Date.now()}`
-      };
-
-      const availablePlayerLanes = [0, 1, 2, 3].filter(col => col !== opponentCenterLane);
-      const playerLane = availablePlayerLanes[Math.floor(Math.random() * availablePlayerLanes.length)];
-
-      setPlayerBoard(prev => {
-        const next = Array.isArray(prev) ? [...prev] : [null, null, null, null];
-        next[playerLane] = {
-          ...cloneCard(CARD_FELLED_TREE),
-          id: `felled-tree-${Date.now()}`
-        };
-        return next;
-      });
-
-      addLog("Anti-OTK: 1 Stone Wall in center lane, 1 Felled Tree on player side!");
+          addLog(`The trail is obstructed: a ${terrainCard.name} stands in lane ${terrainLane + 1}.`);
+        }
+      }
     }
 
     setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
-    // Fair Hand Draw
+    // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers
     const initialHand: CardDef[] = [currentTotem ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem) : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs)];
-    const oneBloodIdx = shuffledDeck.findIndex(c => c.cost === 1);
+    const nukeSigils = ['Bifurcated Strike', 'Trifurcated Strike', 'Double Strike'];
+    let oneBloodIdx = shuffledDeck.findIndex(c => {
+      if (c.cost !== 1) return false;
+      const sigs = (c.sigils || []).map((s: any) => typeof s === 'string' ? s : s?.name || '');
+      return !sigs.some(s => nukeSigils.includes(s)) && (c.attack ?? 0) < 3;
+    });
+    // Fallback if the deck only contains nukes or high costs
+    if (oneBloodIdx === -1) {
+      oneBloodIdx = shuffledDeck.findIndex(c => c.cost === 1);
+    }
     if (oneBloodIdx !== -1) {
       initialHand.push(transformAmorphous(shuffledDeck.splice(oneBloodIdx, 1)[0]));
       addLog("Fair Hand dealt a 1-blood creature.");
@@ -4639,6 +4640,21 @@ export default function App() {
     setScreen('DUEL');
   };
 
+  // Restrict pre-run draft to foundational creatures; sweeps and combo engines are earned later
+  const isStarterDraftEligible = (card: CardDef) => {
+    if (card.name === "Trade Pelt" || card.unsacrificable || card.isMassive) return false;
+    if (card.attack >= 3 || (card.cost && card.cost >= 3)) return false;
+    const bannedSigils = [
+      'Bifurcated Strike',
+      'Trifurcated Strike',
+      'Double Strike',
+      'Unkillable',
+      'Touch of Death',
+    ];
+    const cardSigils = (card.sigils || []).map((s: any) => typeof s === 'string' ? s : s?.name || '');
+    return !cardSigils.some(s => bannedSigils.includes(s));
+  };
+
   const handleSelectLineage = (lineageId: string) => {
     setStartingBones(0);
     startingBonesRef.current = 0;
@@ -4663,7 +4679,7 @@ export default function App() {
 
     const pool: CardDef[] = [];
     const seen = new Set<string>();
-    const eligiblePool = MAIN_DECK_POOL.filter(c => c.name !== "Trade Pelt");
+    const eligiblePool = MAIN_DECK_POOL.filter(isStarterDraftEligible);
     while (pool.length < 8) {
       const c = cloneCard(eligiblePool[Math.floor(Math.random() * eligiblePool.length)]);
       if (!seen.has(c.name)) {
@@ -4677,35 +4693,71 @@ export default function App() {
     setDraftTradesLeft(isRandomizer ? 4 : 2);
     setDraftSelectedDeckIdx(null);
     setDraftSelectedTradeIdx(null);
+    setDraftRevealedIndices([0, 1, 2, 3, 4, 5, 6, 7]);
+    setDraftFlippingDown(false);
+    setDraftFlippingUp(false);
     setScreen('DRAFT');
   };
 
   const executeDraftTrade = () => {
-    if (draftSelectedDeckIdx === null || draftSelectedTradeIdx === null || draftTradesLeft <= 0) return;
+    if (
+      draftSelectedDeckIdx === null ||
+      draftSelectedTradeIdx === null ||
+      draftTradesLeft <= 0 ||
+      draftFlippingDown ||
+      draftFlippingUp
+    )
+      return;
+
     const pCard = draftPlayerDeck[draftSelectedDeckIdx];
     const tCard = draftTradePool[draftSelectedTradeIdx];
+    if (!tCard) return;
 
-    // A Trade Pelt should never be able to be traded for another Trade pelt during the Draft
+    // A Trade Pelt cannot trade for another Trade Pelt
     if (pCard.name === "Trade Pelt" && tCard.name === "Trade Pelt") return;
 
     const nextP = [...draftPlayerDeck];
     const nextT = [...draftTradePool];
-    nextP[draftSelectedDeckIdx] = tCard;
+    const takenIdx = draftSelectedTradeIdx;
 
-    // The acquired creature is replaced in the scavenge pool with another unique non-pelt creature
-    const freshCreatures = MAIN_DECK_POOL.filter(c => c.name !== "Trade Pelt" && !nextT.some(tc => tc.name === c.name));
-    if (freshCreatures.length > 0) {
-      nextT[draftSelectedTradeIdx] = cloneCard(freshCreatures[Math.floor(Math.random() * freshCreatures.length)]);
-    } else {
-      nextT.splice(draftSelectedTradeIdx, 1);
-    }
+    nextP[draftSelectedDeckIdx] = tCard;
+    // Strip the taken card but keep the spacing slot intact
+    nextT[takenIdx] = null;
+
+    const remainingTrades = draftTradesLeft - 1;
 
     setDraftPlayerDeck(nextP);
     setDraftTradePool(nextT);
-    setDraftTradesLeft(l => l - 1);
+    setDraftTradesLeft(remainingTrades);
     setDraftSelectedDeckIdx(null);
     setDraftSelectedTradeIdx(null);
     triggerSfx('play');
+
+    // If another trade is queued, trigger the cascade flip-down ritual and reveal 4 random cards
+    if (remainingTrades > 0) {
+      setDraftFlippingDown(true);
+      setDraftRevealedIndices([]);
+
+      setTimeout(() => {
+        // Collect surviving non-null slots
+        const validIndices = nextT
+          .map((card, i) => (card !== null ? i : -1))
+          .filter(i => i !== -1);
+
+        // Randomly roll 4 choices from the 7 survivors
+        const shuffled = [...validIndices].sort(() => Math.random() - 0.5);
+        const chosenFour = shuffled.slice(0, 4);
+
+        setDraftFlippingDown(false);
+        setDraftFlippingUp(true);
+        setDraftRevealedIndices(chosenFour);
+        triggerSfx('draw');
+
+        setTimeout(() => {
+          setDraftFlippingUp(false);
+        }, 300);
+      }, 350);
+    }
   };
 
   const finalizeDraft = () => {
@@ -6124,13 +6176,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => setScreen('SPLASH')}
-              className="mt-3 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] px-4 py-2 select-none cursor-pointer"
-            >
-              ← RETURN TO TITLE
-            </button>
         </div>
       )}
 
@@ -6287,23 +6332,23 @@ export default function App() {
           DRAFT SCREEN (PELT TRADING)
          ========================================================================= */}
       {screen === 'DRAFT' && (
-        <div 
-          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-4 overflow-hidden font-mono select-none"
+        <div
+          className="absolute inset-0 bg-[#0d0906] z-50 flex flex-col items-center justify-center p-6 overflow-hidden font-mono select-none"
           style={getScreenBgStyle('draft.png')}
         >
-          <h1 className="text-xl md:text-2xl font-serif text-[#d4af37] tracking-widest text-center italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-8">
+          <h1 className="text-2xl md:text-3xl font-serif text-[#d4af37] tracking-widest text-center italic drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] mb-8">
             ...Take Two more Creatures along with you...
           </h1>
 
-          <div className="grid grid-cols-2 gap-10 max-w-6xl w-full mb-6">
+          <div className="grid grid-cols-2 gap-12 lg:gap-16 max-w-[1380px] w-full mb-8">
             {/* Player's Starter Deck directly on the surface */}
             <div className="flex flex-col items-center">
-              <h2 className="text-xs font-mono font-bold text-amber-300/80 uppercase tracking-widest mb-3">
+              <h2 className="text-sm font-mono font-bold text-amber-300/80 uppercase tracking-widest mb-4">
                 Your Creatures
               </h2>
-              <div className="flex flex-col items-center justify-center gap-2 w-full min-h-[140px]">
+              <div className="flex flex-col items-center justify-center gap-4 w-full min-h-[160px]">
                 {/* Row 1: 3 Starter Creatures */}
-                <div className="flex justify-center items-center gap-3 w-full">
+                <div className="flex justify-center items-center gap-4 w-full">
                   {draftPlayerDeck.slice(0, 3).map((c, sliceIdx) => {
                     const idx = sliceIdx;
                     const isSelected = draftSelectedDeckIdx === idx;
@@ -6319,8 +6364,8 @@ export default function App() {
                           c.name !== "Trade Pelt" ? "opacity-50" : "cursor-pointer"
                         } ${
                           isSelected
-                            ? "scale-[1.10] -translate-y-4 z-30"
-                            : "scale-[1.0] hover:scale-[1.05]"
+                            ? "scale-[1.20] -translate-y-4 z-30"
+                            : "scale-[1.10] hover:scale-[1.15]"
                         }`}
                       >
                         {renderCard(c, { isSelected })}
@@ -6330,7 +6375,7 @@ export default function App() {
                 </div>
 
                 {/* Row 2: 2 Trade Pelts */}
-                <div className="flex justify-center items-center gap-3 w-full mt-3">
+                <div className="flex justify-center items-center gap-4 w-full mt-2">
                   {draftPlayerDeck.slice(3).map((c, sliceIdx) => {
                     const idx = sliceIdx + 3;
                     const isSelected = draftSelectedDeckIdx === idx;
@@ -6346,8 +6391,8 @@ export default function App() {
                           c.name !== "Trade Pelt" ? "opacity-50" : "cursor-pointer"
                         } ${
                           isSelected
-                            ? "scale-[1.10] -translate-y-4 z-30"
-                            : "scale-[1.0] hover:scale-[1.05]"
+                            ? "scale-[1.20] -translate-y-4 z-30"
+                            : "scale-[1.10] hover:scale-[1.15]"
                         }`}
                       >
                         {renderCard(c, { isSelected })}
@@ -6360,22 +6405,57 @@ export default function App() {
 
             {/* Scavenge Trade Pool directly on the surface */}
             <div className="flex flex-col items-center">
-              <h2 className="text-xs font-mono font-bold text-red-300/80 uppercase tracking-widest mb-3">
+              <h2 className="text-sm font-mono font-bold text-red-300/80 uppercase tracking-widest mb-4">
                 Merchant's Shop
               </h2>
-              <div className="flex flex-col items-center justify-center gap-3 w-full min-h-[140px]">
+              <div className="flex flex-col items-center justify-center gap-4 w-full min-h-[160px]">
                 {/* Row 1: Top 4 Cards */}
-                <div className="flex justify-center items-center gap-3 w-full">
+                <div className="flex justify-center items-center gap-4 w-full">
                   {draftTradePool.slice(0, 4).map((c, idx) => {
+                    if (c === null) {
+                      return (
+                        <div
+                          key={`draft-slot-empty-${idx}`}
+                          className="w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] border border-[#2b221b]/40 bg-[#0a0807]/30 shadow-inner pointer-events-none"
+                        />
+                      );
+                    }
+
+                    const isRevealed = draftRevealedIndices.includes(idx);
                     const isSelected = draftSelectedTradeIdx === idx;
+
+                    if (!isRevealed) {
+                      return (
+                        <div
+                          key={`draft-back-${idx}`}
+                          className={`w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] pointer-events-none transition-all duration-200 ${
+                            draftFlippingDown ? 'animate-flip-down' : 'opacity-60 filter brightness-60'
+                          }`}
+                        >
+                          <div
+                            className="w-full h-full rounded-[3px] shadow-[0_4px_8px_rgba(0,0,0,0.85)] border border-[#1a120b]"
+                            style={{
+                              backgroundImage: `url(${BASE}/assets/cardbases/cardbacks.png)`,
+                              backgroundSize: '100% 100%',
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
                         key={c.id || `draft-t-${c.name}-${idx}`}
-                        onClick={() => setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx)}
+                        onClick={() => {
+                          if (draftFlippingDown || draftFlippingUp) return;
+                          setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
+                        }}
                         className={`cursor-pointer transform origin-center shrink-0 transition-all duration-200 ${
+                          draftFlippingUp ? 'animate-flip-up' : ''
+                        } ${
                           isSelected
-                            ? "scale-[1.10] -translate-y-4 z-30"
-                            : "scale-[1.0] hover:scale-[1.05]"
+                            ? "scale-[1.20] -translate-y-4 z-30"
+                            : "scale-[1.10] hover:scale-[1.15]"
                         }`}
                       >
                         {renderCard(c, { isSelected })}
@@ -6385,18 +6465,54 @@ export default function App() {
                 </div>
 
                 {/* Row 2: Bottom 4 Cards */}
-                <div className="flex justify-center items-center gap-3 w-full mt-1">
+                <div className="flex justify-center items-center gap-4 w-full mt-2">
                   {draftTradePool.slice(4, 8).map((c, sliceIdx) => {
                     const idx = sliceIdx + 4;
+
+                    if (c === null) {
+                      return (
+                        <div
+                          key={`draft-slot-empty-${idx}`}
+                          className="w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] border border-[#2b221b]/40 bg-[#0a0807]/30 shadow-inner pointer-events-none"
+                        />
+                      );
+                    }
+
+                    const isRevealed = draftRevealedIndices.includes(idx);
                     const isSelected = draftSelectedTradeIdx === idx;
+
+                    if (!isRevealed) {
+                      return (
+                        <div
+                          key={`draft-back-${idx}`}
+                          className={`w-[112px] h-[160px] shrink-0 select-none scale-[1.10] origin-center rounded-[3px] pointer-events-none transition-all duration-200 ${
+                            draftFlippingDown ? 'animate-flip-down' : 'opacity-60 filter brightness-60'
+                          }`}
+                        >
+                          <div
+                            className="w-full h-full rounded-[3px] shadow-[0_4px_8px_rgba(0,0,0,0.85)] border border-[#1a120b]"
+                            style={{
+                              backgroundImage: `url(${BASE}/assets/cardbases/cardbacks.png)`,
+                              backgroundSize: '100% 100%',
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
                         key={c.id || `draft-t-${c.name}-${idx}`}
-                        onClick={() => setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx)}
+                        onClick={() => {
+                          if (draftFlippingDown || draftFlippingUp) return;
+                          setDraftSelectedTradeIdx(draftSelectedTradeIdx === idx ? null : idx);
+                        }}
                         className={`cursor-pointer transform origin-center shrink-0 transition-all duration-200 ${
+                          draftFlippingUp ? 'animate-flip-up' : ''
+                        } ${
                           isSelected
-                            ? "scale-[1.10] -translate-y-4 z-30"
-                            : "scale-[1.0] hover:scale-[1.05]"
+                            ? "scale-[1.20] -translate-y-4 z-30"
+                            : "scale-[1.10] hover:scale-[1.15]"
                         }`}
                       >
                         {renderCard(c, { isSelected })}
@@ -6409,11 +6525,17 @@ export default function App() {
           </div>
 
           {/* Minimal Tactile Action Buttons */}
-          <div className="flex items-center gap-4 mt-3">
+          <div className="flex items-center gap-5 mt-2">
             <button
               onClick={executeDraftTrade}
-              disabled={draftSelectedDeckIdx === null || draftSelectedTradeIdx === null || draftTradesLeft <= 0}
-              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+              disabled={
+                draftSelectedDeckIdx === null ||
+                draftSelectedTradeIdx === null ||
+                draftTradesLeft <= 0 ||
+                draftFlippingDown ||
+                draftFlippingUp
+              }
+              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 select-none"
             >
               CONFIRM TRADE
             </button>
@@ -6421,7 +6543,7 @@ export default function App() {
             <button
               onClick={finalizeDraft}
               disabled={draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0}
-              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
+              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 select-none"
               title={
                 draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0
                   ? "You must trade all of your Pelts before venturing further"
@@ -8605,119 +8727,142 @@ export default function App() {
                 </div>
               </div>
 
-              {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + Thick Tactile S & C Draw Decks directly beneath */}
-              <div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-44 select-none pointer-events-auto z-20">
-                {/* Floating OVERKILL text anchored above runnel without displacing layout */}
-                {isOverkill && (
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
-                    OVERKILL
-                  </div>
-                )}
+              {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + S & C Draw Decks directly beneath */}
+<div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-44 select-none pointer-events-auto z-20">
+  {/* Floating OVERKILL text anchored above runnel without displacing layout */}
+  {isOverkill && (
+    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
+      OVERKILL
+    </div>
+  )}
 
-                {/* 1. THE BLEEDING STONE RUNNEL (Replaces Brass Balance Scale) */}
+  {/* 1. THE BLEEDING STONE RUNNEL (Replaces Brass Balance Scale) */}
+  <div
+    className={`w-12 h-80 bg-[#120f0d] border border-[#2b221b] rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_3px_10px_rgba(0,0,0,0.95),0_2px_5px_rgba(0,0,0,0.8)] select-none transition-all ${
+      scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
+    }`}
+    title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
+  >
+    {/* Top Endpoint: Rusted Iron Drain Grate (+5 Opponent Defeat) */}
+    <div
+      className="w-7 h-2.5 bg-[#1c140e] border border-[#3d2a1c] rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner"
+      title="Opponent Defeat (+5)"
+    >
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+    </div>
+
+    {/* Central Conduit Chamber with Chiseled Notches & Vertical Runnel Groove */}
+    <div className="relative flex-1 w-full flex items-center justify-center my-1.5">
+      {/* 11 Chiseled Tally Notches (-5 to +5) along the slate slab */}
+      <div className="absolute inset-y-0 w-full flex flex-col justify-between items-center pointer-events-none py-0.5 z-0">
+        {[5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5].map((val) => {
+          const isMidpoint = val === 0;
+          const isCurrent = scale === val;
+          const isTurnOneBypass = val === 4 && turnNumber === 1;
+
+          return (
+            <div
+              key={`runnel-notch-${val}`}
+              className="w-full relative flex items-center justify-center"
+            >
+              <div
+                className={`transition-all duration-300 ${
+                  isMidpoint
+                    ? 'w-8 h-[2px] bg-[#4a3b30] shadow-[0_1px_1px_rgba(0,0,0,0.8)]'
+                    : isCurrent
+                      ? 'w-5 h-[1.5px] bg-[#78350f] shadow-[0_0_4px_rgba(245,158,11,0.5)]'
+                      : 'w-4 h-[1px] bg-[#2a211a]'
+                }`}
+              />
+
+              {/* Diegetic Arterial Shunt Petcock (Active strictly on Turn 1 at +4) */}
+              {isTurnOneBypass && (
                 <div
-                  className={`w-12 h-80 bg-[#120f0d] border border-[#2b221b] rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_3px_10px_rgba(0,0,0,0.95),0_2px_5px_rgba(0,0,0,0.8)] select-none transition-all ${
-                    scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
-                  }`}
-                  title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
+                  className="absolute -right-3.5 flex items-center gap-0.5 pointer-events-auto"
+                  title="Arterial Bypass Petcock: Turn 1 hydraulic limit. Excess blood vents to collection reservoir."
                 >
-                  {/* Top Endpoint: Rusted Iron Drain Grate (+5 Opponent Defeat) */}
                   <div
-                    className="w-7 h-2.5 bg-[#1c140e] border border-[#3d2a1c] rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner"
-                    title="Opponent Defeat (+5)"
-                  >
-                    <div className="w-[1px] h-full bg-[#0a0807]" />
-                    <div className="w-[1px] h-full bg-[#0a0807]" />
-                    <div className="w-[1px] h-full bg-[#0a0807]" />
-                    <div className="w-[1px] h-full bg-[#0a0807]" />
-                  </div>
-
-                  {/* Central Conduit Chamber with Chiseled Notches & Vertical Runnel Groove */}
-                  <div className="relative flex-1 w-full flex items-center justify-center my-1.5">
-                    {/* 11 Chiseled Tally Notches (-5 to +5) along the slate slab */}
-                    <div className="absolute inset-y-0 w-full flex flex-col justify-between items-center pointer-events-none py-0.5 z-0">
-                      {[5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5].map((val) => {
-                        const isMidpoint = val === 0;
-                        const isCurrent = scale === val;
-                        return (
-                          <div
-                            key={`runnel-notch-${val}`}
-                            className="w-full flex items-center justify-center"
-                          >
-                            <div
-                              className={`transition-all duration-300 ${
-                                isMidpoint
-                                  ? 'w-8 h-[2px] bg-[#4a3b30] shadow-[0_1px_1px_rgba(0,0,0,0.8)]'
-                                  : isCurrent
-                                    ? 'w-5 h-[1.5px] bg-[#78350f] shadow-[0_0_4px_rgba(245,158,11,0.5)]'
-                                    : 'w-4 h-[1px] bg-[#2a211a]'
-                              }`}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Central Hydrostatic Blood Column Groove */}
-                  <div className="w-3.5 absolute top-1 bottom-1 left-1/2 -translate-x-1/2 bg-[#0a0807] rounded-full overflow-hidden shadow-inner z-10">
-                    {/* Active Hydraulic Blood Fluid tied directly to scale balance (-5 to +5) */}
-                    {(() => {
-                      const fillPercent = Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
-                      return (
-                        <div
-                          className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-                            scaleRumble ? 'animate-pulse scale-x-110 filter brightness-125' : ''
-                          }`}
-                          style={{
-                            height: `${fillPercent}%`,
-                            background: 'linear-gradient(to top, #7f1d1d 0%, #b91c1c 40%, #dc2626 75%, #ef4444 100%)',
-                            backgroundColor: '#b91c1c',
-                            boxShadow: '0 0 16px rgba(239, 68, 68, 0.9), inset 0 0 4px rgba(254, 202, 202, 0.5)',
-                          }}
-                        >
-                          {/* Surface Meniscus: Intensified glowing line at the meniscus edge to show exact balance level */}
-                          <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#fecaca] shadow-[0_0_10px_rgba(254,202,202,1)]" />
-                        </div>
-                      );
-                    })()}
-                  </div>
+                    className={`w-2 h-1 border border-[#4a2e18] rounded-r-[1px] transition-colors duration-300 ${
+                      scale >= 4
+                        ? 'bg-red-950 border-red-700 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
+                        : 'bg-[#1e150f]'
+                    }`}
+                  />
+                  {scale >= 4 && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping shadow-[0_0_8px_rgba(239,68,68,1)]" />
+                  )}
                 </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-                {/* Bottom Endpoint: Rusted Iron Drain Grate (-5 Player Defeat) */}
-                <div
-                  className="w-7 h-2.5 bg-[#1c140e] border border-[#3d2a1c] rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner"
-                  title="Player Defeat (-5)"
-                >
-                  <div className="w-[1px] h-full bg-[#0a0807]" />
-                  <div className="w-[1px] h-full bg-[#0a0807]" />
-                  <div className="w-[1px] h-full bg-[#0a0807]" />
-                  <div className="w-[1px] h-full bg-[#0a0807]" />
-                </div>
-              </div>
+      {/* Central Hydrostatic Blood Column Groove */}
+      <div className="w-3.5 absolute top-1 bottom-1 left-1/2 -translate-x-1/2 bg-[#0a0807] rounded-full overflow-hidden shadow-inner z-10">
+        {(() => {
+          const fillPercent = Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
+          return (
+            <div
+              className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                scaleRumble ? 'animate-pulse scale-x-110 filter brightness-125' : ''
+              }`}
+              style={{
+                height: `${fillPercent}%`,
+                background: 'linear-gradient(to top, #7f1d1d 0%, #b91c1c 40%, #dc2626 75%, #ef4444 100%)',
+                backgroundColor: '#b91c1c',
+                boxShadow: '0 0 16px rgba(239, 68, 68, 0.9), inset 0 0 4px rgba(254, 202, 202, 0.5)',
+              }}
+            >
+              {/* Surface Meniscus */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#fecaca] shadow-[0_0_10px_rgba(254,202,202,1)]" />
+            </div>
+          );
+        })()}
+      </div>
+    </div>
 
-              {/* 2. BLOOD BANK OUNCES (Replaces Teeth Counter) */}
-              {(() => {
-                const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
-                const liveBattleOverkill = Math.max(0, scale - winThreshold);
-                // Prevent duplicate addition when combat victory commits overkill into totalOverkillDamage while scale is still > winThreshold
-                const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
+    {/* Bottom Endpoint: Rusted Iron Drain Grate (-5 Player Defeat) */}
+    <div
+      className="w-7 h-2.5 bg-[#1c140e] border border-[#3d2a1c] rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner"
+      title="Player Defeat (-5)"
+    >
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+      <div className="w-[1px] h-full bg-[#0a0807]" />
+    </div>
+  </div>
 
-                return (
-                  <div
-                    className="flex items-center justify-center gap-1.5 px-3 py-1 bg-[#16120f] border border-[#2f241c] rounded-sm shadow-[0_2px_4px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] select-none"
-                    title={`Blood Bank: ${displayBloodOz} Ounces`}
-                  >
-                    <span className="font-['Cinzel',_serif] font-black text-sm tracking-widest text-[#d8b88a] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
-                      {displayBloodOz}
-                    </span>
-                    <span className="font-mono text-[10px] font-bold text-[#8c6747] tracking-wider uppercase">
-                      OZ
-                    </span>
-                  </div>
-                );
-              })()}
+  {/* 2. BLOOD BANK OUNCES (Replaces Teeth Counter) */}
+  {(() => {
+    const winThreshold = typeof getRequiredScaleWinDamage === 'function' ? getRequiredScaleWinDamage() : 5;
+    const liveBattleOverkill = Math.max(0, scale - winThreshold);
+    const displayBloodOz = (totalOverkillDamage || 0) + (isOverkill ? 0 : liveBattleOverkill);
 
-                {/* Turn Indicator & Bone Reservoir Tray (Relocated beneath Ampoule Rack) */}
+    return (
+      <div
+        className={`flex items-center justify-center gap-1.5 px-3 py-1 bg-[#16120f] border rounded-sm shadow-[0_2px_4px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] select-none transition-all duration-300 ${
+          turnNumber === 1 && scale >= 4
+            ? 'border-red-900/80 shadow-[0_0_10px_rgba(220,38,38,0.4)]'
+            : 'border-[#2f241c]'
+        }`}
+        title={`Blood Bank: ${displayBloodOz} Ounces`}
+      >
+        <span className="font-['Cinzel',_serif] font-black text-sm tracking-widest text-[#d8b88a] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+          {displayBloodOz}
+        </span>
+        <span className="font-mono text-[10px] font-bold text-[#8c6747] tracking-wider uppercase">
+          OZ
+        </span>
+      </div>
+    );
+  })()}
+
+                {/* Bone Reservoir Tray (Relocated beneath Ampoule Rack) */}
                 <div className="flex flex-col items-center gap-2 w-full mt-2.5 select-none">
                   <div className="font-['Cinzel',_serif] font-bold text-xs sm:text-sm tracking-[0.22em] uppercase text-[#9e8368] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                     Turn {turnNumber}
