@@ -2841,12 +2841,8 @@ export default function App() {
     });
 
     if (evolvingLanes.length > 0) {
-      // Apply a short shake animation when a card evolves via Fledgling
-      for (const idx of evolvingLanes) {
-        setDamagedCard({ isPlayer, lane: idx });
-      }
-      await new Promise(res => setTimeout(res, 200));
-      setDamagedCard(null);
+      // Clean maturation pause without triggering combat damage keyframes
+      await new Promise(res => setTimeout(res, 250));
     }
 
     return board.map(card => {
@@ -4432,26 +4428,80 @@ export default function App() {
         ChiptuneAudio.playBattle(1.5);
       }
 
-      // --- Inscryption Encounter Scaling ---
-      // Duel 1 (duelsCompleted === 0): 3-4 cards total, exactly 1 opening card, max threat 2
-      // Duel 2 (duelsCompleted === 1): 4-5 cards total, 1-2 opening cards, max threat 3
-      // Duel 3+ (duelsCompleted >= 2): 5-7 cards total, 2 opening cards, max threat 4
+      // --- Tiered Encounter Scaling (Increases once per stage, halfway through each) ---
+      // Tier 1: Stage 1, Battles 1-4 (Basic encounters)
+      // Tier 2: Stage 1 Battle 5 (Pre-Boss 1) & Stage 2 first half (Battles 1-2)
+      // Tier 3: Stage 2 second half (Battles 3+) & Stage 3 first half (Battles 1-2)
+      // Tier 4: Stage 3 second half (Battles 3+)
+      // Tier 5: Stage 4 first half (Battles 1-2, directly after Boss 3)
+      // Tier 6: Stage 4 second half (Battles 3+, Final Difficulty) & post-boss endless runs
+      const getEnemyDifficultyTier = (): number => {
+        // Runs continued past final boss lock at max difficulty
+        if (stage >= 5) return 6;
+
+        if (stage === 1) {
+          // Persist Tier 1 for the first 4 battles; jump to Tier 2 on battle 5
+          return (level <= 4 && duelsCompleted < 4) ? 1 : 2;
+        }
+        if (stage === 2) {
+          // Halfway through Stage 2 bumps to Tier 3
+          return level <= 2 ? 2 : 3;
+        }
+        if (stage === 3) {
+          // Halfway through Stage 3 bumps to Tier 4
+          return level <= 2 ? 3 : 4;
+        }
+        if (stage === 4) {
+          // Tier 5 begins after 3rd boss; bumps to Tier 6 halfway through Stage 4
+          return level <= 2 ? 5 : 6;
+        }
+        return 6;
+      };
+
+      const difficultyTier = getEnemyDifficultyTier();
+
       let maxRegularCards: number;
       let initialCount: number;
       let maxOpeningThreat: number;
 
-      if (duelsCompleted === 0) {
-        maxRegularCards = Math.floor(Math.random() * 2) + 3; // 3 or 4 cards total for the entire duel
-        initialCount = 1;                                     // Exactly ONE card queued on Turn 1
-        maxOpeningThreat = 2;                                 // Mantis God & heavy hitters are strictly banned
-      } else if (duelsCompleted === 1) {
-        maxRegularCards = Math.floor(Math.random() * 2) + 4; // 4 to 5 cards total
-        initialCount = Math.random() < 0.5 ? 1 : 2;
-        maxOpeningThreat = 3;
-      } else {
-        maxRegularCards = Math.floor(Math.random() * 3) + 5; // 5 to 7 cards total
-        initialCount = 2;
-        maxOpeningThreat = 4;
+      switch (difficultyTier) {
+        case 1:
+          // Tier 1: 3 cards total, 1 opening card, threat capped at 2 (no multi-strikers or heavy hitters)
+          maxRegularCards = 3;
+          initialCount = 1;
+          maxOpeningThreat = 2;
+          break;
+        case 2:
+          // Tier 2: 4 cards total, 1 opening card, threat capped at 2.5
+          maxRegularCards = 4;
+          initialCount = 1;
+          maxOpeningThreat = 2.5;
+          break;
+        case 3:
+          // Tier 3: 4 cards total, 1-2 opening cards, threat capped at 3
+          maxRegularCards = 4;
+          initialCount = Math.random() < 0.6 ? 1 : 2;
+          maxOpeningThreat = 3;
+          break;
+        case 4:
+          // Tier 4: 5 cards total, 2 opening cards, threat capped at 3.5
+          maxRegularCards = 5;
+          initialCount = 2;
+          maxOpeningThreat = 3.5;
+          break;
+        case 5:
+          // Tier 5: 5 cards total, 2 opening cards, threat capped at 4
+          maxRegularCards = 5;
+          initialCount = 2;
+          maxOpeningThreat = 4;
+          break;
+        case 6:
+        default:
+          // Tier 6: Final Difficulty - 6 cards total, 2 opening cards, threat capped at 4.5
+          maxRegularCards = 6;
+          initialCount = 2;
+          maxOpeningThreat = 4.5;
+          break;
       }
 
       setEnemyMaxDuelCards(maxRegularCards);
@@ -4493,7 +4543,7 @@ export default function App() {
       enemyCardsPlayedRef.current = playedCount;
       setEnemyCardsPlayed(playedCount);
       setEnemyWavesLeft(2);
-      addLog(`Encounter ${encounter} started (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
+      addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
     }
 
     // --- Anti-OTK Safeguards & Grizzly Wall ---
@@ -5608,10 +5658,12 @@ export default function App() {
         } ${options?.customScale || ''}`}
       >
         <div
-          className={`relative w-full h-full box-border rounded-sm select-none bg-contain bg-no-repeat bg-center overflow-hidden transform-gpu origin-bottom ${
-            shouldHover
-              ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
-              : 'transition-transform duration-200 ease-out'
+          className={`relative w-full h-full box-border rounded-sm select-none bg-contain bg-no-repeat bg-center overflow-hidden ${
+            animClass
+              ? 'transition-none'
+              : shouldHover
+                ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
+                : 'transition-transform duration-200 ease-out'
           } ${borderStyle} ${animClass} ${waterborneClass}`}
           style={{
             backgroundImage: `url(${activeCardBase})`,
