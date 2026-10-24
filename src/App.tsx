@@ -318,6 +318,10 @@ export const SIGIL_DESCRIPTIONS: Record<string, string> = {
   'Bees Within': "When struck, adds an Airborne Bee (1/1) to your hand.",
   'Amorphous': "When drawn, morphs into a random sigil.",
   'Stinky': "Reduces the Attack of the opposing creature by 1.",
+  'Made of Stone': "Immune to Touch of Death and Stinky debuffs.",
+  'Tidal Lock': "Pulls celestial gravity; forces all incoming attacks directly into itself.",
+  'Shadow': "Stats are inverted under the Bone Lord's eclipse.",
+  'Omnistrike': "Attacks all Creatures in zones. Can only attack directly on an empty board.",
   'Ant Spawner': "When played, a Worker Ant is added to your hand.",
   'Rampager': "Moves to an adjacent space, swapping positions with whatever stands there.",
 };
@@ -1788,6 +1792,11 @@ export default function App() {
   // Crossroads & Event States
   const [crossroadsOptions, setCrossroadsOptions] = useState<string[]>([]);
 
+// Event action lock to prevent double-clicks and spam
+  const [isEventBusy, setIsEventBusy] = useState<boolean>(false);
+  const [isTotemFadingOut, setIsTotemFadingOut] = useState<boolean>(false);
+  const [totemChoicesHidden, setTotemChoicesHidden] = useState<boolean>(false);
+
   // Campfire Event
   const [campfireCardIdx, setCampfireCardIdx] = useState<number | null>(null);
   const [campfireBuffType, setCampfireBuffType] = useState<'attack' | 'health'>('attack');
@@ -1845,6 +1854,7 @@ export default function App() {
   } | null>(null);
   const [activeDefendingLane, setActiveDefendingLane] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [damagedCard, setDamagedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
+  const [evolvingCards, setEvolvingCards] = useState<Array<{ isPlayer: boolean; lane: number; phase: 'up' | 'down' }>>([]);
   const [destroyedCard, setDestroyedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [hpFlashingCard, setHpFlashingCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [jitteringCard, setJitteringCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
@@ -2849,11 +2859,12 @@ export default function App() {
     });
 
     if (evolvingLanes.length > 0) {
-      // Clean maturation pause without triggering combat damage keyframes
+      // Phase 1: Flip old card face-down to show card back
+      setEvolvingCards(evolvingLanes.map(lane => ({ isPlayer, lane, phase: 'down' })));
       await new Promise(res => setTimeout(res, 250));
     }
 
-    return board.map(card => {
+    const nextBoard = board.map(card => {
       if (!card || !card.sigils.includes('Fledgling')) return card;
       const age = (card.age || 0) + 1;
       if (age >= 1) {
@@ -2877,6 +2888,24 @@ export default function App() {
       }
       return { ...card, age };
     });
+
+    if (evolvingLanes.length > 0) {
+      // Update board state mid-flip so the card reveals its evolved art
+      if (isPlayer) {
+        setPlayerBoard(nextBoard);
+      } else {
+        setEnemyBoard(nextBoard);
+      }
+
+      // Phase 2: Flip evolved card face-up onto the board
+      setEvolvingCards(evolvingLanes.map(lane => ({ isPlayer, lane, phase: 'up' })));
+      triggerSfx('play');
+      await new Promise(res => setTimeout(res, 250));
+
+      setEvolvingCards([]);
+    }
+
+    return nextBoard;
   };
 
   // --- Complete Combat Execution with Visual Pacing ---
@@ -4842,6 +4871,7 @@ export default function App() {
 
   // --- Campfire Event ---
   const initCampfire = () => {
+    setIsEventBusy(false);
     setCampfireCardIdx(null);
     setCampfireBuffType(Math.random() < 0.5 ? 'attack' : 'health');
     setCampfireStage(0);
@@ -4849,9 +4879,15 @@ export default function App() {
   };
 
   const applyCampfireWarm = () => {
-    if (campfireCardIdx === null) return;
+    if (isEventBusy || campfireCardIdx === null) return;
+    setIsEventBusy(true);
+
     const nextDeck = [...masterDeck];
     const targetCard = nextDeck[campfireCardIdx];
+    if (!targetCard) {
+      setIsEventBusy(false);
+      return;
+    }
 
     if (campfireStage === 0) {
       if (campfireBuffType === 'attack') targetCard.attack = (targetCard.attack || 0) + 1;
@@ -4861,6 +4897,7 @@ export default function App() {
       setCampfireStage(1);
       triggerSfx('play');
       addLog(`Warmed ${targetCard.name} safely.`);
+      setIsEventBusy(false);
     } else {
       const willDevour = !isCampfireSafe && Math.random() < 0.50;
       if (willDevour) {
@@ -4869,6 +4906,7 @@ export default function App() {
           setIsCampfireSafe(true);
         }
         nextDeck.splice(campfireCardIdx, 1);
+        setCampfireCardIdx(null);
         setMasterDeck(nextDeck);
         masterDeckRef.current = nextDeck;
         triggerSfx('defeat');
@@ -4881,6 +4919,7 @@ export default function App() {
           btnText: "Flee the Chapel",
           onAction: () => {
             setModalAlert(null);
+            setIsEventBusy(false);
             startNextDuel(undefined, nextDeck);
           }
         });
@@ -4897,6 +4936,7 @@ export default function App() {
           btnText: "Leave the Chapel",
           onAction: () => {
             setModalAlert(null);
+            setIsEventBusy(false);
             startNextDuel(undefined, nextDeck);
           }
         });
@@ -4915,19 +4955,26 @@ export default function App() {
   };
 
   const initAltar = () => {
+    setIsEventBusy(false);
     setAltarHostId(null);
     setAltarSacrificeId(null);
     setScreen('EVENT_ALTAR');
   };
 
   const applyAltarTransfer = () => {
-    if (!altarHostId || !altarSacrificeId || altarHostId === altarSacrificeId) return;
+    if (isEventBusy || !altarHostId || !altarSacrificeId || altarHostId === altarSacrificeId) return;
+    setIsEventBusy(true);
+
     const host = masterDeck.find(c => c.id === altarHostId);
     const sacrifice = masterDeck.find(c => c.id === altarSacrificeId);
-    if (!host || !sacrifice) return;
+    if (!host || !sacrifice) {
+      setIsEventBusy(false);
+      return;
+    }
 
     if (hasMoreSigilsThanOriginal(host)) {
       addLog(`Cannot perform ritual: ${host.name} already has more sigils than it originally should.`);
+      setIsEventBusy(false);
       return;
     }
 
@@ -4938,11 +4985,15 @@ export default function App() {
 
     if (mergedSigils.length >= 5) {
       addLog(`Cannot perform ritual: ${host.name} would have 5 or more sigils.`);
+      setIsEventBusy(false);
       return;
     }
 
-    const nextDeck = masterDeck.filter(c => c.id !== altarSacrificeId).map(c => {
-      if (c.id === altarHostId) {
+    setAltarHostId(null);
+    setAltarSacrificeId(null);
+
+    const nextDeck = masterDeck.filter(c => c.id !== sacrifice.id).map(c => {
+      if (c.id === host.id) {
         return { ...c, sigils: mergedSigils };
       }
       return c;
@@ -4958,6 +5009,7 @@ export default function App() {
       btnText: "Leave Altar",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
         startNextDuel(undefined, nextDeck);
       }
     });
@@ -4965,6 +5017,7 @@ export default function App() {
 
   // --- Totem Carvings Event ---
   const initTotemCarving = () => {
+    setIsEventBusy(false);
     const allTribes: Tribe[] = ["Reptile", "Insect", "Avian", "Canine", "Hooved"];
     const shuffled = [...allTribes].sort(() => Math.random() - 0.5);
     setCarvingTribes(shuffled.slice(0, 3));
@@ -4972,6 +5025,9 @@ export default function App() {
   };
 
   const claimCarvingTribe = (tribe: Tribe) => {
+    if (isEventBusy) return;
+    setIsEventBusy(true);
+
     const pool = MAIN_DECK_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
     const chosen = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
     const nextDeck = [...masterDeck, chosen];
@@ -4985,6 +5041,7 @@ export default function App() {
       btnText: "Proceed",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
         startNextDuel(undefined, nextDeck);
       }
     });
@@ -5024,18 +5081,27 @@ export default function App() {
 
   // --- Bone Lord Event ---
   const initBoneLord = () => {
+    setIsEventBusy(false);
     setBoneLordSelectedIdx(null);
     setScreen('EVENT_BONE_LORD');
   };
 
   const confirmBoneLordOffering = () => {
-    if (boneLordSelectedIdx === null) return;
-    const card = masterDeck[boneLordSelectedIdx];
-    if (!card) return;
+    if (isEventBusy || boneLordSelectedIdx === null) return;
+    setIsEventBusy(true);
+
+    const targetIdx = boneLordSelectedIdx;
+    const card = masterDeck[targetIdx];
+    if (!card) {
+      setIsEventBusy(false);
+      return;
+    }
     const isGoat = card.name === "Black Goat";
     const bonus = isGoat ? 3 : 1;
 
-    const nextDeck = masterDeck.filter((_, idx) => idx !== boneLordSelectedIdx);
+    setBoneLordSelectedIdx(null);
+
+    const nextDeck = masterDeck.filter((_, idx) => idx !== targetIdx);
     const newStartingBones = (startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones) + bonus;
     setStartingBones(newStartingBones);
     startingBonesRef.current = newStartingBones;
@@ -5052,6 +5118,7 @@ export default function App() {
       btnText: "Accept Boon",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
         startNextDuel(undefined, nextDeck);
       }
     });
@@ -5109,10 +5176,18 @@ export default function App() {
   };
 
   const confirmMycologistCombine = () => {
-    if (mycoSelectedIndices.length !== 2) return;
+    if (isEventBusy || mycoSelectedIndices.length !== 2) return;
+    setIsEventBusy(true);
+
     const card1 = masterDeck[mycoSelectedIndices[0]];
     const card2 = masterDeck[mycoSelectedIndices[1]];
-    if (card1.name !== card2.name) return;
+    if (!card1 || !card2 || card1.name !== card2.name) {
+      setIsEventBusy(false);
+      return;
+    }
+
+    const targets = [...mycoSelectedIndices];
+    setMycoSelectedIndices([]);
 
     const fused = cloneCard(card1);
     fused.attack = (card1.attack || 0) + (card2.attack || 0);
@@ -5122,33 +5197,42 @@ export default function App() {
     fused.sigils = sigils;
     fused.isMycologistCombined = true;
 
-    const nextDeck = masterDeck.filter((_, idx) => !mycoSelectedIndices.includes(idx));
+    const nextDeck = masterDeck.filter((_, idx) => !targets.includes(idx));
     nextDeck.push(fused);
     setMasterDeck(nextDeck);
     masterDeckRef.current = nextDeck;
-    triggerSfx('victory');
+    triggerSfx('sacrifice');
 
     setModalAlert({
-      title: "SPORE FUSION SUCCESS",
-      message: `The Mycologists stitched your two ${card1.name}s into a horrifyingly potent hybrid specimen (${fused.attack}/${fused.health})!`,
+      title: "FUSED IN SANGUINE WEB",
+      message: `The Weaver bound ${card1.name} and ${card2.name} into an abomination of exceptional might!`,
       isWin: true,
-      btnText: "Take Specimen",
+      btnText: "Leave Weaver",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
         startNextDuel(undefined, nextDeck);
       }
     });
   };
 
-  // --- Goo Mage Goobert Event ---
   const initGoobert = () => {
+    setIsEventBusy(false);
     setGoobertSelectedIdx(null);
     setScreen('EVENT_GOOBERT');
   };
 
- const confirmGoobertClone = () => {
-    if (goobertSelectedIdx === null) return;
+  const confirmGoobertClone = () => {
+    if (isEventBusy || goobertSelectedIdx === null) return;
+    setIsEventBusy(true);
+
     const original = masterDeck[goobertSelectedIdx];
+    if (!original) {
+      setIsEventBusy(false);
+      return;
+    }
+    setGoobertSelectedIdx(null);
+
     const clone = cloneCard(original);
 
     // Flag as Goobert creation
@@ -5274,6 +5358,9 @@ export default function App() {
 
   // --- Woodcarver Totem Event ---
   const initBuildTotem = () => {
+    setIsEventBusy(false);
+    setIsTotemFadingOut(false);
+    setTotemChoicesHidden(false);
     setTotemStage('REWARD');
     setSelectedTotemRewardIdx(null);
     setAssemblyHeadIdx(null);
@@ -5499,8 +5586,17 @@ export default function App() {
       animClass = 'animate-sigil-jitter z-45';
     } else if (isSummoning) {
       animClass = 'animate-summon-wipe';
-    } else if (options?.isDroppingQueue) {
+   } else if (options?.isDroppingQueue) {
       animClass = 'card-dropping-queue';
+    }
+
+    // Check if card is flipping through an evolution sequence
+    const isPlayerCard = !options?.isOpponent;
+    const activeEvolve = laneIndex !== undefined && !options?.isQueue
+      ? evolvingCards.find(e => e.isPlayer === isPlayerCard && e.lane === laneIndex)
+      : null;
+    if (activeEvolve && activeEvolve.phase === 'up') {
+      animClass = 'animate-flip-up z-40';
     }
 
     if (options?.isDefending && !options?.isDamaged) {
@@ -5530,7 +5626,12 @@ export default function App() {
     let parchmentGradient = 'radial-gradient(circle at 50% 30%, #d8b88a 0%, #c29e6b 70%, #9e7b4c 100%)';
     let parchmentShadow = 'inset 0 0 10px rgba(45, 25, 10, 0.5), inset 0 0 2px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.75)';
 
-    if (isSubmergedActive) {
+    // Cards flip face-down showing strictly the raw card back asset (Waterborne or evolving Phase 1)
+    const isMassiveEvolvingFaceDown = laneIndex !== undefined && !options?.isQueue
+      ? evolvingCards.some(e => e.isPlayer === !options?.isOpponent && e.lane === laneIndex && e.phase === 'down')
+      : false;
+
+    if (isSubmergedActive || isMassiveEvolvingFaceDown) {
       parchmentGradient = 'radial-gradient(circle at 50% 30%, #87a7ab 0%, #5d878e 70%, #3f656b 100%)';
       parchmentShadow = 'inset 0 0 10px rgba(25, 55, 60, 0.6), inset 0 0 2px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.75)';
     } else if (card.isSacrifice && card.name !== 'Squirrel') {
@@ -5596,12 +5697,13 @@ export default function App() {
                 return (
                   <div
                     key={`${sigilName}-${idx}`}
-                    className="relative z-10 transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center cursor-default drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+                    title={`${sigilName}: ${SIGIL_DESCRIPTIONS[sigilName] || 'A dark, inscrutable power.'}`}
+                    className="relative z-10 transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center cursor-help drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
                   >
                     <img
                       src={iconSrc}
                       alt={sigilName}
-                      className="w-5 h-5 object-contain select-none pointer-events-none"
+                      className="w-[22px] h-[22px] object-contain select-none pointer-events-none"
                       onError={(e) => {
                         // Fallback to text icon if PNG asset path differs
                         const target = e.currentTarget;
@@ -5630,8 +5732,12 @@ export default function App() {
       );
     }
 
-    // Waterborne cards flip face-down showing strictly the raw card back asset
-    if (isSubmergedActive) {
+    // Cards flip face-down showing strictly the raw card back asset (Waterborne or evolving Phase 1)
+    const isEvolvingFaceDown = laneIndex !== undefined && !options?.isQueue
+      ? evolvingCards.some(e => e.isPlayer === !options?.isOpponent && e.lane === laneIndex && e.phase === 'down')
+      : false;
+
+    if (isSubmergedActive || isEvolvingFaceDown) {
       return (
         <div
           key={`${card.id || card.name}-submerged-${options?.laneIndex ?? laneIndex ?? 0}`}
@@ -5824,7 +5930,7 @@ export default function App() {
                 <div
                   key={`sigil-${s}-${idx}`}
                   title={`${s}: ${SIGIL_DESCRIPTIONS[s] || ''}`}
-                  className={`${medallionSizeClass} shrink-0 rounded-full bg-[#1c1815] border border-[#3d271d] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center overflow-hidden pointer-events-auto cursor-help`}
+                  className={`${medallionSizeClass} shrink-0 rounded-full bg-[#1c1815] border border-[#3d271d] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center overflow-hidden pointer-events-auto cursor-help transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]`}
                 >
                   <img
                     src={getSigilArtUrl(s)}
@@ -6662,7 +6768,7 @@ export default function App() {
                   'campfire': { title: 'Divine Blessing', desc: 'Allow the Zealot to Baptize a Creature, empowering it', icon: <Flame className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
                   'altar': { title: 'Mystical Altar', desc: 'Surrender a Creature to the Maker to transfer its Crests', icon: <Sparkles className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
                   'carving': { title: 'Woven Patches', desc: 'A Creature from the chosen Tribal Crest heeds your call', icon: <Award className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
-                  'cost': { title: 'Merchant Offering', desc: 'The Merchant offers one on the house', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
+                  'cost': { title: 'Five Finger Discount', desc: 'You catch the Merchant dozing off', icon: <Zap className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
                   'bonelord': { title: 'Bloodrites', desc: 'The Old One demands a sacrifice, granting you a Blessing', icon: <Skull className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
                   'mycologist': { title: 'Stitched Anew', desc: 'Allow the Weaver to sew duplicate cards together', icon: <Layers className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
                   'goobert': { title: 'Printing Press', desc: 'The Begotten offers to Stamp a card', icon: <Sparkles className="w-5 h-5 text-teal-400 filter sepia-[0.4]" /> },
@@ -6744,7 +6850,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={applyCampfireWarm}
-                disabled={campfireCardIdx === null}
+                disabled={campfireCardIdx === null || isEventBusy}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
                 {campfireStage === 0
@@ -6840,7 +6946,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={applyAltarTransfer}
-                disabled={!altarHostId || !altarSacrificeId}
+                disabled={!altarHostId || !altarSacrificeId || isEventBusy}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
                 SACRIFICE TO THE MAKER
@@ -6869,8 +6975,12 @@ export default function App() {
               {(carvingTribes.length > 0 ? carvingTribes : (["Reptile", "Canine", "Avian"] as Tribe[])).map(tribe => (
                 <div
                   key={tribe}
-                  onClick={() => claimCarvingTribe(tribe)}
-                  className="p-4 text-center transition-all cursor-pointer group flex flex-col items-center border border-dashed border-[#8c6747]/70 hover:border-amber-400/90 bg-[#150f0a] shadow-[0_4px_14px_rgba(0,0,0,0.85)] hover:shadow-[0_0_18px_rgba(245,158,11,0.25)] rounded-[3px] w-36 hover:-translate-y-1"
+                  onClick={() => !isEventBusy && claimCarvingTribe(tribe)}
+                  className={`p-4 text-center transition-all flex flex-col items-center border border-dashed border-[#8c6747]/70 bg-[#150f0a] shadow-[0_4px_14px_rgba(0,0,0,0.85)] rounded-[3px] w-36 select-none ${
+                    isEventBusy
+                      ? 'opacity-40 cursor-not-allowed pointer-events-none'
+                      : 'cursor-pointer group hover:border-amber-400/90 hover:shadow-[0_0_18px_rgba(245,158,11,0.25)] hover:-translate-y-1'
+                  }`}
                 >
                   <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-[#ab8a68] mb-1.5">
                     Patch
@@ -6955,7 +7065,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={confirmBoneLordOffering}
-                disabled={boneLordSelectedIdx === null}
+                disabled={boneLordSelectedIdx === null || isEventBusy}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
                 OFFER SACRIFICE
@@ -7030,7 +7140,7 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={confirmMycologistCombine}
-                    disabled={mycoSelectedIndices.length !== 2 || masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name}
+                disabled={mycoSelectedIndices.length !== 2 || masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name || isEventBusy}
                     className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                   >
                     SEW CREATURES
@@ -7074,7 +7184,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={confirmGoobertClone}
-                disabled={goobertSelectedIdx === null}
+                disabled={goobertSelectedIdx === null || isEventBusy}
                 className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
               >
                 STAMP YOUR CARD
@@ -7179,54 +7289,68 @@ export default function App() {
 
             {totemStage === 'REWARD' ? (
               <>
-                <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
+                <p className={`text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider transition-opacity duration-300 ${isTotemFadingOut ? 'opacity-0' : ''}`}>
                   Claim an Tribal Patch or Threadbound Crest to bind to your Effigy.
                 </p>
 
-                <div className="flex gap-6 justify-center max-w-2xl mb-8">
-                  {totemRewardChoices.map((tc, idx) => (
-                    <div
-                      key={`totem-rew-${idx}`}
-                      onClick={() => setSelectedTotemRewardIdx(idx)}
-                      className={`p-4 border border-dashed rounded-[3px] cursor-pointer transition text-center select-none w-40 flex flex-col items-center justify-between ${
-                        selectedTotemRewardIdx === idx
-                          ? 'border-amber-400 bg-[#1f150e] text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.3)] -translate-y-1'
-                          : 'border-[#8c6747]/70 hover:border-amber-500/80 bg-[#140d08] text-stone-300'
-                      }`}
-                    >
-                      <div className="text-[9px] text-[#ab8a68] uppercase font-mono tracking-widest mb-1.5">
-                        {tc.type === 'head' ? 'Tribal Patch' : 'Torso Crest'}
-                      </div>
+                {!totemChoicesHidden && (
+                  <div className="flex gap-6 justify-center max-w-2xl mb-8">
+                    {totemRewardChoices.map((tc, idx) => {
+                      const isSelected = selectedTotemRewardIdx === idx;
+                      const fadeAnim = isTotemFadingOut
+                        ? isSelected
+                          ? 'animate-swipe-up-fade pointer-events-none'
+                          : 'opacity-0 transition-opacity duration-300 pointer-events-none'
+                        : '';
 
-                      <div className="w-14 h-14 bg-[#20150d] border border-[#4a3422] rounded-[2px] flex items-center justify-center p-1.5 mb-2">
-                        {tc.type === 'head' ? (
-                          TRIBE_EMBROIDERY[tc.value] || <span className="text-2xl">🧵</span>
-                        ) : (
-                          <img
-                            src={getSigilArtUrl(tc.value)}
-                            alt={tc.value}
-                            className="w-10 h-10 object-contain filter drop-shadow brightness-90 contrast-125 pointer-events-none"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        )}
-                      </div>
+                      return (
+                        <div
+                          key={`totem-rew-${idx}`}
+                          onClick={() => !isEventBusy && !isTotemFadingOut && setSelectedTotemRewardIdx(idx)}
+                          className={`p-4 border border-dashed rounded-[3px] transition text-center select-none w-40 flex flex-col items-center justify-between ${fadeAnim} ${
+                            isSelected
+                              ? 'border-amber-400 bg-[#1f150e] text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.3)] -translate-y-1'
+                              : 'border-[#8c6747]/70 hover:border-amber-500/80 bg-[#140d08] text-stone-300'
+                          } ${isEventBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          <div className="text-[9px] text-[#ab8a68] uppercase font-mono tracking-widest mb-1.5">
+                            {tc.type === 'head' ? 'Tribal Patch' : 'Torso Crest'}
+                          </div>
 
-                      <div className="text-sm font-mono font-bold text-amber-200 truncate w-full">
-                        {tc.value}
-                      </div>
+                          <div className="w-14 h-14 bg-[#20150d] border border-[#4a3422] rounded-[2px] flex items-center justify-center p-1.5 mb-2">
+                            {tc.type === 'head' ? (
+                              TRIBE_EMBROIDERY[tc.value] || <span className="text-2xl">🧵</span>
+                            ) : (
+                              <img
+                                src={getSigilArtUrl(tc.value)}
+                                alt={tc.value}
+                                className="w-10 h-10 object-contain filter drop-shadow brightness-90 contrast-125 pointer-events-none"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            )}
+                          </div>
 
-                      <div className="mt-3 font-mono text-[9px] uppercase tracking-widest text-amber-200/50">
-                        {selectedTotemRewardIdx === idx ? 'SELECTED' : 'SELECT'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                          <div className="text-sm font-mono font-bold text-amber-200 truncate w-full">
+                            {tc.value}
+                          </div>
 
-                <button
-                  onClick={() => {
-                    if (selectedTotemRewardIdx !== null) {
+                          <div className="mt-3 font-mono text-[9px] uppercase tracking-widest text-amber-200/50">
+                            {selectedTotemRewardIdx === idx ? 'SELECTED' : 'SELECT'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {!totemChoicesHidden && (
+                  <button
+                    onClick={async () => {
+                      if (isEventBusy || selectedTotemRewardIdx === null) return;
+                      setIsEventBusy(true);
+
                       const choice = totemRewardChoices[selectedTotemRewardIdx];
                       const nextPieces = [...totemPieces, choice];
                       setTotemPieces(nextPieces);
@@ -7238,19 +7362,33 @@ export default function App() {
                         const bIdx = nextPieces.findIndex(p => p.type === 'body');
                         setAssemblyHeadIdx(hIdx !== -1 ? hIdx : null);
                         setAssemblyBodyIdx(bIdx !== -1 ? bIdx : null);
+                        setIsEventBusy(false);
                       } else {
                         if (choice.type === 'head') setActiveTotem(prev => ({ ...prev, head: choice.value as Tribe }));
                         else setActiveTotem(prev => ({ ...prev, body: choice.value }));
                         addLog(`Totem piece acquired: ${choice.value}`);
+
+                        // 1. Chosen piece floats upward and fades out
+                        setIsTotemFadingOut(true);
+                        await new Promise(res => setTimeout(res, 500));
+
+                        // 2. Unmount choices and button from the DOM completely
+                        setTotemChoicesHidden(true);
+
+                        // 3. Pause for an exact second on the empty loom
+                        await new Promise(res => setTimeout(res, 1000));
+
                         startNextDuel();
                       }
-                    }
-                  }}
-                  disabled={selectedTotemRewardIdx === null}
-                  className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
-                >
-                  BIND TO EFFIGY
-                </button>
+                    }}
+                    disabled={selectedTotemRewardIdx === null || isEventBusy}
+                    className={`bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-300 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none ${
+                      isTotemFadingOut ? 'opacity-0 pointer-events-none' : ''
+                    }`}
+                  >
+                    BIND TO EFFIGY
+                  </button>
+                )}
               </>
             ) : (
               <div className="flex flex-col items-center max-w-2xl w-full my-auto text-center">
