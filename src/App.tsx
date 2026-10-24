@@ -471,7 +471,21 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne"] },
   { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 8, emoji: "🦃", sigils: ["Airborne"] },
   { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
-  { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] }
+  { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
+
+  // --- Utility, Incubators & Bone Economy ---
+  { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 2, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
+  { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
+  { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
+  { name: "Red Behemoth", class: "Canine", attack: 2, health: 5, cost: 2, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
+  { name: "Red Colossus", class: "Canine", attack: 3, health: 8, cost: 3, emoji: "🐕", sigils: ["Hefty", "Bloodlust"] },
+  { name: "Jackal", class: "Canine", attack: 2, health: 2, boneCost: 3, emoji: "🐺", sigils: ["Sprinter", "Corpse Eater"] },
+  { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored"] },
+  { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
+  { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
+  { name: "Silken Moth", class: "Insect", attack: 2, health: 1, cost: 0, emoji: "🐛", sigils: ["Airborne"] },
+  { name: "Hyphae", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🍄", sigils: ["Morsel", "Fledgling"], evolvesInto: "Mycelium" },
+  { name: "Mycelium", class: "No Class", attack: 2, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] }
 ];
 
 export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
@@ -512,7 +526,9 @@ const EVOLUTION_MAP: Record<string, string> = {
   "Wolf Cub": "Wolf",
   "Elk": "Moose Buck",
   "Mantis": "Mantiseater",
-  "Geist": "Ghast"
+  "Geist": "Ghast",
+  "Silkworm": "Silken Moth",
+  "Hyphae": "Mycelium"
 };
 
 // Restricted pool of sigils for Boss totem in Woodcarver Boss
@@ -2446,6 +2462,15 @@ export default function App() {
       const playedCard = cloneCard(cardToPlay, ouroborosBuffs);
       if (!playedCard.id) playedCard.id = `card-${Date.now()}-${Math.random()}`;
       triggerSummonWipe(playedCard.id);
+
+      if (playedCard.name.startsWith("Red ")) {
+        playedCard.wasPlayedThisDuel = true;
+        setMasterDeck(prev => prev.map(c => 
+          (c.id === cardToPlay.id || c.name === cardToPlay.name) 
+            ? { ...c, wasPlayedThisDuel: true } 
+            : c
+        ));
+      }
 
       if (morselStats.attack > 0 || morselStats.health > 0) {
         playedCard.attack = (playedCard.attack || 0) + morselStats.attack;
@@ -5611,11 +5636,11 @@ export default function App() {
 
     // Resurface animation plays strictly when entering owner's turn phase, never during combat
     const waterborneClass =
-      !animClass &&
       isWaterborne &&
       !isSubmergedActive &&
       laneIndex !== undefined &&
-      (options?.isOpponent ? phase === 'ENEMY' : phase === 'DRAW')
+      !options?.isOpponent &&
+      phase === 'DRAW'
         ? 'animate-flip-up'
         : '';
 
