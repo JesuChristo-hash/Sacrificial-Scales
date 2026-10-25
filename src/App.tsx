@@ -580,6 +580,16 @@ export const ENEMY_EXCLUDED_CARD_NAMES = new Set([
 
 export const ENEMY_MAIN_DECK_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !ENEMY_EXCLUDED_CARD_NAMES.has(c.name));
 
+export const EVENT_EXCLUDED_CARD_NAMES = new Set([
+  'Red Stray',
+  'Red Hound',
+  'Red Behemoth',
+  'Red Colossus',
+  'Mycelium',
+  'Silken Moth'
+]);
+export const EVENT_CARD_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !EVENT_EXCLUDED_CARD_NAMES.has(c.name));
+
 export interface BossDialogueSet {
   greetings: string[];
   dismissals: string[];
@@ -2985,7 +2995,7 @@ export default function App() {
       const winTarget = getRequiredScaleWinDamage();
       if (val >= winTarget) {
         if (isBossMatch) {
-          if ((bossState.type === 'The Weaver' || !bossState.type) && bossPhase === 1) return 'PHASE_SHIFT';
+          if ((bossState.type === 'The Weaver' || (bossState.type as any) === 'Woodcarver' || !bossState.type) && bossPhase === 1) return 'PHASE_SHIFT';
           if (bossState.type === 'Zealot' && bossPhase === 1) return 'PHASE_SHIFT';
           if (bossState.type === 'The Begotten' && bossPhase === 1) return 'PHASE_SHIFT';
           if (bossState.type === 'BoneLord' && (bossPhase === 1 || bossPhase === 2)) return 'PHASE_SHIFT';
@@ -3305,29 +3315,54 @@ export default function App() {
             setEnemyBoard([null, null, null, null]);
             setEnemyQueue([null, null, null, null]);
 
-            // 2. Weaver Phase 2: Lethal Totem craft & Brood deployment
-            const p2Tribe: Tribe = woodcarverClasses[1] || 'Insect';
-            const lethalSigilPool = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Trifurcated Strike'];
+           // 2. Weaver Phase 2: Flip to the opposite tribe and carve a lethal totem
+            const p1Tribe: Tribe = woodcarverClasses[0] || 'Insect';
+            const candidateTribes: Tribe[] = ['Canine', 'Avian', 'Insect', 'Hooved', 'Reptile'];
+            const p2Tribe: Tribe = woodcarverClasses[1] && woodcarverClasses[1] !== p1Tribe
+              ? woodcarverClasses[1]
+              : (candidateTribes.filter(t => t !== p1Tribe)[Math.floor(Math.random() * 4)]);
+
+            const lethalSigilPool = ['Touch of Death', 'Double Strike', 'Bifurcated Strike', 'Sharp Quills', 'Mighty Leap'];
             const chosenLethalSigil = lethalSigilPool[Math.floor(Math.random() * lethalSigilPool.length)];
             setBossTotem({ class: p2Tribe, sigil: chosenLethalSigil });
 
-            // Spawn Phase 2 frontliner and queue reinforcement
-            const weaverFrontliner = cloneCard(ALL_CARD_LOOKUP['Mantis'] || MAIN_DECK_POOL[1], 0);
-            if (!weaverFrontliner.sigils.includes(chosenLethalSigil)) weaverFrontliner.sigils.push(chosenLethalSigil);
-            currEBoard[1] = weaverFrontliner;
+            // Siphon candidates exclusively from her second tribe
+            const tribePool = ENEMY_MAIN_DECK_POOL.filter(c => c.class === p2Tribe || c.class === 'ALL Classes');
+            const validPool = tribePool.length > 0 ? tribePool : ENEMY_MAIN_DECK_POOL;
+            const lowTier = validPool.filter(c => (c.attack || 0) <= 1);
+            const frontPool = lowTier.length > 0 ? lowTier : validPool;
 
-            const weaverQueueCard = cloneCard(ALL_CARD_LOOKUP['Spider'] || MAIN_DECK_POOL[2] || ALL_CARD_LOOKUP['Adder'], 0);
-            if (!weaverQueueCard.sigils.includes(chosenLethalSigil)) weaverQueueCard.sigils.push(chosenLethalSigil);
-            currEQueue[2] = weaverQueueCard;
+            const makeP2Beast = (pool: CardDef[]) => {
+              const beast = cloneCard(pool[Math.floor(Math.random() * pool.length)], 0);
+              if ((beast.class === p2Tribe || beast.class === 'ALL Classes') && !beast.sigils.includes(chosenLethalSigil)) {
+                beast.sigils.push(chosenLethalSigil);
+              }
+              return beast;
+            };
+
+            // Paced battlefield: 2 active frontliners and 1 queue reserve matching the new totem
+            currEBoard = [
+              null,
+              makeP2Beast(frontPool),
+              makeP2Beast(validPool),
+              null,
+            ];
+
+            currEQueue = [
+              null,
+              null,
+              makeP2Beast(validPool),
+              null,
+            ];
 
             setBossState(prev => ({
               ...prev,
               phase: 2,
-              activeDialogue: "She drops the article she was working on... leaning in closer to focus exlusively on you.",
+              activeDialogue: "She tosses aside the first carving... fashioning a far more vicious effigy for what remains.",
             }));
 
             addLog("=== THE WEAVER: PHASE 2 INITIALIZED ===");
-            addLog(`The Weaver carves a deadly totem: ${p2Tribe} denizens gain ${chosenLethalSigil}!`);
+            addLog(`The Weaver carves a deadly totem: [${p2Tribe}] denizens gain [${chosenLethalSigil}]!`);
           } else if (bossState.type === 'Zealot') {
             // 1. Fadeout and wipe both frontline and queue
             setEnemyBoard(prev => prev.map(c => c ? { ...c, isDying: true } : null));
@@ -4241,7 +4276,8 @@ export default function App() {
       };
 
       const nextForm = RED_EVOLUTION_CHAIN[card.name];
-      if (battles >= 2 && nextForm) {
+      const requiredBattles = card.name === "Red Stray" ? 2 : 3;
+      if (battles >= requiredBattles && nextForm) {
         const template = ALL_CARD_LOOKUP[nextForm] || MAIN_DECK_POOL.find(p => p.name === nextForm);
         if (template) {
           const evolved = cloneCard(template);
@@ -5145,7 +5181,7 @@ export default function App() {
     if (isEventBusy) return;
     setIsEventBusy(true);
 
-    const pool = MAIN_DECK_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
+    const pool = EVENT_CARD_POOL.filter(c => c.class === tribe || c.class === "ALL Classes");
     const chosen = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
     const nextDeck = [...masterDeck, chosen];
     setMasterDeck(nextDeck);
@@ -5173,11 +5209,11 @@ export default function App() {
   };
 
   const claimCostBargain = (type: '1 Blood' | '2 Blood' | '3 Blood' | 'Bones') => {
-    let pool = MAIN_DECK_POOL;
-    if (type === '1 Blood') pool = MAIN_DECK_POOL.filter(c => c.cost === 1);
-    else if (type === '2 Blood') pool = MAIN_DECK_POOL.filter(c => c.cost === 2);
-    else if (type === '3 Blood') pool = MAIN_DECK_POOL.filter(c => c.cost === 3);
-    else if (type === 'Bones') pool = MAIN_DECK_POOL.filter(c => (c.boneCost || 0) > 0);
+    let pool = EVENT_CARD_POOL;
+    if (type === '1 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 1);
+    else if (type === '2 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 2);
+    else if (type === '3 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 3);
+    else if (type === 'Bones') pool = EVENT_CARD_POOL.filter(c => (c.boneCost || 0) > 0);
 
     const card = cloneCard(pool[Math.floor(Math.random() * pool.length)]);
     const nextDeck = [...masterDeck, card];
@@ -5272,8 +5308,11 @@ export default function App() {
   };
 
   const claimMycologistDuplicate = () => {
-    if (!mycoOfferedCard) return;
-    const originalTemplate = ALL_CARD_LOOKUP[mycoOfferedCard.name] || MAIN_DECK_POOL.find(p => p.name === mycoOfferedCard.name) || mycoOfferedCard;
+    if (isEventBusy || !mycoOfferedCard) return;
+    setIsEventBusy(true);
+
+    const offered = mycoOfferedCard;
+    const originalTemplate = ALL_CARD_LOOKUP[offered.name] || MAIN_DECK_POOL.find(p => p.name === offered.name) || offered;
     const clone = cloneCard(originalTemplate);
     const nextDeck = [...masterDeck, clone];
     setMasterDeck(nextDeck);
@@ -5282,11 +5321,13 @@ export default function App() {
 
     setModalAlert({
       title: "TWIN CREATURE ADDED",
-      message: `The Weaver stuffed a twin of ${mycoOfferedCard.name} into your deck!`,
+      message: `The Weaver stuffed a twin of ${offered.name} into your deck!`,
       isWin: true,
       btnText: "Venture Onwards",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
+        setMycoOfferedCard(null);
         startNextDuel(undefined, nextDeck);
       }
     });
@@ -5428,7 +5469,7 @@ export default function App() {
       const sigilPool = Object.keys(SIGIL_MAPPING).filter(s => s !== 'Amorphous');
       const rewards: CardDef[] = [];
       while (rewards.length < 3) {
-        const base = cloneCard(MAIN_DECK_POOL[Math.floor(Math.random() * MAIN_DECK_POOL.length)]);
+        const base = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
         const extraSigil = sigilPool[Math.floor(Math.random() * sigilPool.length)];
         if (!base.sigils.includes(extraSigil)) base.sigils.push(extraSigil);
         rewards.push(base);
@@ -5444,7 +5485,7 @@ export default function App() {
     const picks: CardDef[] = [];
     const used = new Set<string>();
     while (picks.length < 3) {
-      const c = cloneCard(MAIN_DECK_POOL[Math.floor(Math.random() * MAIN_DECK_POOL.length)]);
+      const c = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
       if (!used.has(c.name)) {
         used.add(c.name);
         picks.push(c);
@@ -5462,7 +5503,7 @@ export default function App() {
     const picks: CardDef[] = [];
     const used = new Set<string>();
     while (picks.length < 3) {
-      const c = cloneCard(MAIN_DECK_POOL[Math.floor(Math.random() * MAIN_DECK_POOL.length)]);
+      const c = cloneCard(EVENT_CARD_POOL[Math.floor(Math.random() * EVENT_CARD_POOL.length)]);
       if (!used.has(c.name)) {
         used.add(c.name);
         picks.push(c);
@@ -5913,7 +5954,7 @@ export default function App() {
           {/* --- TOP HEADER (8% - 18%) --- */}
           {/* Bone Cost: Top Left (Bone icon on top, number directly beneath) */}
           {options?.showCost !== false && card.boneCost !== undefined && card.boneCost > 0 && (
-            <div className="absolute top-[8%] left-[6%] flex flex-col items-center justify-center pointer-events-none z-10 leading-none">
+            <div className="absolute top-[11.5%] left-[7.5%] flex flex-col items-center justify-center pointer-events-none z-10 leading-none">
               <span className="text-[10px] leading-none filter brightness-75 select-none">🦴</span>
               <span
                 className="text-[10px] font-black font-mono tracking-tighter leading-none mt-0.5 select-none"
@@ -6931,7 +6972,7 @@ export default function App() {
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- DIVINE BLESSING --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">BABTISM OF BOILIING BLOOD</h1>
-            <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
+            <p className="text-amber-400/70 text-xs mb-14 text-center max-w-lg leading-relaxed">
               {campfireStage === 0
                 ? "The Zealot's wicked smile sickens you. Select a creature to babtize in the boiling blood."
                 : isCampfireSafe
@@ -7206,6 +7247,7 @@ export default function App() {
                 )}
                 <button
                   onClick={claimMycologistDuplicate}
+                  disabled={isEventBusy || !mycoOfferedCard}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
                   COMMIT TO YOUR ACTIONS
