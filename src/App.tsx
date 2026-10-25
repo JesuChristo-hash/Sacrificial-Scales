@@ -48,6 +48,8 @@ export const TRIBE_ICONS: Record<Tribe, string> = {
 };
 
 export interface CardDef {
+  wasPlayedThisDuel?: boolean;
+  battlesPlayed?: number;
   id?: string;
   name: string;
   class: Tribe;
@@ -444,12 +446,12 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Dire Wolf", class: "Canine", attack: 2, health: 5, cost: 3, emoji: "🐺", sigils: ["Double Strike"] },
   { name: "Great White", class: "No Class", attack: 4, health: 2, cost: 3, emoji: "🦈", sigils: ["Waterborne"] },
   { name: "Opossum", class: "No Class", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
-  { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 4, emoji: "🐺", sigils: [] },
-  { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 4, emoji: "💀", sigils: ["Unkillable"] },
-  { name: "Rattler", class: "Reptile", attack: 3, health: 1, boneCost: 6, emoji: "🐍", sigils: [] },
+  { name: "Coyote", class: "Canine", attack: 3, health: 2, boneCost: 4, emoji: "🐺", sigils: [] },
+  { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 3, emoji: "💀", sigils: ["Unkillable"] },
+  { name: "Rattler", class: "Reptile", attack: 3, health: 1, boneCost: 5, emoji: "🐍", sigils: [] },
   { name: "Alpha", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Leader"] },
-  { name: "House Fly", class: "Insect", attack: 1, health: 2, boneCost: 5, emoji: "🐛", sigils: ["Corpse Eater"] },
-  { name: "Wolverine", class: "No Class", attack: 1, health: 3, boneCost: 5, emoji: "🦡", sigils: ["Bloodlust"] },
+  { name: "House Fly", class: "Insect", attack: 1, health: 2, boneCost: 4, emoji: "🐛", sigils: ["Corpse Eater"] },
+  { name: "Wolverine", class: "No Class", attack: 1, health: 3, boneCost: 4, emoji: "🦡", sigils: ["Bloodlust"] },
   { name: "Demon Elk", class: "Hooved", attack: 1, health: 2, boneCost: 4, emoji: "🦌", sigils: ["Sprinter", "Touch of Death"] },
   { name: "Geck", class: "Reptile", attack: 1, health: 1, cost: 0, emoji: "🦎", sigils: [] },
   { name: "Magpie", class: "Avian", attack: 1, health: 1, cost: 2, emoji: "🦉", sigils: ["Airborne", "Hoarder"] },
@@ -469,7 +471,7 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Amalgam", class: "ALL Classes", attack: 3, health: 3, cost: 2, emoji: "🧬", sigils: [] },
   { name: "Lammergeier", class: "Avian", attack: 0, health: 4, cost: 3, emoji: "🦅", sigils: ["Airborne"] },
   { name: "River Otter", class: "No Class", attack: 1, health: 1, cost: 1, emoji: "🦦", sigils: ["Waterborne"] },
-  { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 8, emoji: "🦃", sigils: ["Airborne"] },
+  { name: "Turkey Vulture", class: "Avian", attack: 3, health: 3, boneCost: 6, emoji: "🦃", sigils: ["Airborne"] },
   { name: "Wolf Cub", class: "Canine", attack: 1, health: 1, cost: 1, emoji: "🐾", sigils: ["Fledgling"], evolvesInto: "Wolf" },
   { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
 
@@ -478,8 +480,8 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
   { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
   { name: "Red Behemoth", class: "Canine", attack: 2, health: 5, cost: 2, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
-  { name: "Red Colossus", class: "Canine", attack: 3, health: 8, cost: 3, emoji: "🐕", sigils: ["Hefty", "Bloodlust"] },
-  { name: "Jackal", class: "Canine", attack: 2, health: 2, boneCost: 3, emoji: "🐺", sigils: ["Sprinter", "Corpse Eater"] },
+  { name: "Red Colossus", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Hefty", "Bloodlust"] },
+  { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 3, emoji: "🐺", sigils: ["Guardian", "Corpse Eater"] },
   { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored"] },
   { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
   { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
@@ -503,7 +505,6 @@ MAIN_DECK_POOL.forEach(c => {
 });
 
 export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
-  { name: "Stone Wall", class: "No Class", attack: 0, health: 4, emoji: "🧱", sigils: ["Made of Stone"], unsacrificable: true },
   { name: "Skeleton", class: "No Class", attack: 1, health: 1, emoji: "💀", sigils: ["Brittle"] },
   { name: "Geist", class: "No Class", attack: 0, health: 7, emoji: "👻", sigils: ["Burrower", "Fledgling"], evolvesInto: "Ghast" },
   { name: "Ghast", class: "No Class", attack: 3, health: 9, emoji: "🌫️", sigils: ["Airborne", "Brittle"] },
@@ -519,14 +520,23 @@ BOSS_EXCLUSIVE_CARDS.forEach(c => {
   ALL_CARD_LOOKUP[c.name] = c;
 });
 
-const EVOLUTION_MAP: Record<string, string> = {
-  "Tadpole": "Bullfrog",
+type EvolutionTarget = string | { target: string; chance: number }[];
+
+const EVOLUTION_MAP: Record<string, EvolutionTarget> = {
+  "Tadpole": [
+    { target: "Bullfrog", chance: 40 },
+    { target: "Mud Turtle", chance: 30 },
+    { target: "River Snapper", chance: 15 },
+    { target: "Tsuchinoko", chance: 10 },
+    { target: "Great White", chance: 5 }
+  ],
   "Elk Fawn": "Elk",
   "Dire Wolf Pup": "Dire Wolf",
   "Wolf Cub": "Wolf",
   "Elk": "Moose Buck",
   "Mantis": "Mantiseater",
   "Geist": "Ghast",
+  "Cat": "Anubis",
   "Silkworm": "Silken Moth",
   "Hyphae": "Mycelium"
 };
@@ -548,6 +558,7 @@ export const WOODCARVER_BOSS_TOTEM_SIGILS: string[] = [
 export const ENEMY_EXCLUDED_CARD_NAMES = new Set([
   'Hodag',
   'Demon Elk',
+  'Daus',
   'Magpie',
   'Raccoon',
   'Lammergeier',
@@ -556,7 +567,15 @@ export const ENEMY_EXCLUDED_CARD_NAMES = new Set([
   'Geck',
   'Cat',
   'Black Goat',
-  'Warren'
+  'Warren',
+  'Silkworm',
+  'Silken Moth',
+  'Hyphae',
+  'Mycelium',
+  'Tsuchinoko',
+  'Red Stray',
+  'Red Colossus',
+  'Red Behemoth'
 ]);
 
 export const ENEMY_MAIN_DECK_POOL: CardDef[] = MAIN_DECK_POOL.filter(c => !ENEMY_EXCLUDED_CARD_NAMES.has(c.name));
@@ -2893,7 +2912,26 @@ export default function App() {
       if (!card || !card.sigils.includes('Fledgling')) return card;
       const age = (card.age || 0) + 1;
       if (age >= 1) {
-        const evoName = EVOLUTION_MAP[card.name] || card.evolvesInto;
+        const evoTarget = EVOLUTION_MAP[card.name] || card.evolvesInto;
+        let evoName: string | undefined;
+
+        if (Array.isArray(evoTarget)) {
+          const roll = Math.random() * 100;
+          let acc = 0;
+          for (const opt of evoTarget) {
+            acc += opt.chance;
+            if (roll < acc) {
+              evoName = opt.target;
+              break;
+            }
+          }
+          if (!evoName && evoTarget.length > 0) {
+            evoName = evoTarget[0].target;
+          }
+        } else if (typeof evoTarget === 'string') {
+          evoName = evoTarget;
+        }
+
         if (evoName && ALL_CARD_LOOKUP[evoName]) {
           const evolved = cloneCard(ALL_CARD_LOOKUP[evoName], ouroborosBuffs);
           evolved.id = card.id;
@@ -4190,6 +4228,50 @@ export default function App() {
 
     const nextDuels = duelsCompleted + 1;
     setDuelsCompleted(nextDuels);
+
+    // Resolve multi-battle evolutions for the Red series
+    setMasterDeck(prev => prev.map(card => {
+      if (!card.wasPlayedThisDuel) return card;
+
+      const battles = ((card as any).battlesPlayed || 0) + 1;
+      const RED_EVOLUTION_CHAIN: Record<string, string> = {
+        "Red Stray": "Red Hound",
+        "Red Hound": "Red Behemoth",
+        "Red Behemoth": "Red Colossus"
+      };
+
+      const nextForm = RED_EVOLUTION_CHAIN[card.name];
+      if (battles >= 2 && nextForm) {
+        const template = ALL_CARD_LOOKUP[nextForm] || MAIN_DECK_POOL.find(p => p.name === nextForm);
+        if (template) {
+          const evolved = cloneCard(template);
+          evolved.id = card.id;
+
+          // Preserve campfire stat buffs
+          const prevTemplate = ALL_CARD_LOOKUP[card.name] || MAIN_DECK_POOL.find(p => p.name === card.name);
+          const bonusAtk = Math.max(0, (card.attack || 0) - (prevTemplate?.attack || 0));
+          const bonusHp = Math.max(0, (card.health || 0) - (prevTemplate?.health || 0));
+          evolved.attack = (evolved.attack || 0) + bonusAtk;
+          evolved.health = (evolved.health || 0) + bonusHp;
+
+          // Preserve transferred sigils (e.g. from Altar sacrifice)
+          const prevBaseSigils = prevTemplate?.sigils || [];
+          const transferredSigils = (card.sigils || []).filter((s: any) => !prevBaseSigils.includes(s));
+          evolved.sigils = Array.from(new Set([...(template.sigils || []), ...transferredSigils]));
+
+          evolved.wasPlayedThisDuel = false;
+          (evolved as any).battlesPlayed = 0;
+          addLog(`The carnage transformed your ${card.name} into ${nextForm}!`);
+          return evolved;
+        }
+      }
+
+      return {
+        ...card,
+        wasPlayedThisDuel: false,
+        battlesPlayed: battles
+      };
+    }));
     const newStage = Math.floor(nextDuels / 2) + 1;
     const newLevel = (nextDuels % 2) + 1;
 
@@ -4756,7 +4838,17 @@ export default function App() {
   // Restrict pre-run draft to foundational creatures; sweeps and combo engines are earned later
   const isStarterDraftEligible = (card: CardDef) => {
     if (card.name === "Trade Pelt" || card.unsacrificable || card.isMassive) return false;
-    if (card.attack >= 3 || (card.cost && card.cost >= 3)) return false;
+
+    // Explicit exclusions: Red series, Mycelium, Silken Moth
+    const draftBannedNames = ['Red Stray', 'Red Hound', 'Red Behemoth', 'Red Colossus', 'Mycelium', 'Silken Moth'];
+    if (draftBannedNames.includes(card.name)) return false;
+
+    // Restrict cards costing 3 or more blood
+    if (card.cost && card.cost >= 3) return false;
+
+    // Power cap (attack >= 3) applies unless the card costs 2 blood
+    if (card.cost !== 2 && card.attack >= 3) return false;
+
     const bannedSigils = [
       'Bifurcated Strike',
       'Trifurcated Strike',
@@ -4778,9 +4870,9 @@ export default function App() {
     if (lineageId === 'vanilla') starters = ["Stoat", "Bullfrog", "Wolf"];
     else if (lineageId === 'witchcraft') starters = ["Black Goat", "Moose Buck", "Mole"];
     else if (lineageId === 'eldritch') starters = ["Mantis", "Tadpole", "Raven"];
-    else if (lineageId === 'skeleton') starters = ["Warren", "Rat King", "Dire Wolf Pup"];
-    else if (lineageId === 'infestation') starters = ["Worker Ant", "Ant Queen", "Flying Ant"];
-    else if (lineageId === 'paleozoic') starters = ["Bullfrog", "Mud Turtle", "Great White"];
+    else if (lineageId === 'skeleton') starters = ["Warren", "Red Stray", "Dire Wolf Pup"];
+    else if (lineageId === 'infestation') starters = ["Silkworm", "Ant Queen", "Flying Ant"];
+    else if (lineageId === 'paleozoic') starters = ["Hyphae", "Mud Turtle", "Great White"];
     else if (lineageId === 'randomizer') {
       starters = ["Amoeba", "Trade Pelt", "Trade Pelt"];
       isRandomizer = true;
@@ -6183,14 +6275,6 @@ export default function App() {
               {/* Main Outer Runes Border Ring */}
               <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" strokeWidth="1.2" />
               <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="0.8" strokeDasharray="3, 4" />
-              {/* Occult glyphs & runes along outer border */}
-              <text x="50" y="24" className="text-[11px] font-mono select-none" fill="currentColor">♆</text>
-              <text x="146" y="24" className="text-[11px] font-mono select-none" fill="currentColor">☠</text>
-              <text x="16" y="80" className="text-[11px] font-mono select-none" fill="currentColor">⚔</text>
-              <text x="178" y="80" className="text-[11px] font-mono select-none" fill="currentColor">⚰</text>
-              <text x="24" y="142" className="text-[11px] font-mono select-none" fill="currentColor">⛧</text>
-              <text x="164" y="142" className="text-[11px] font-mono select-none" fill="currentColor">☾</text>
-              <text x="96" y="193" className="text-[11px] font-mono select-none" fill="currentColor">⚖</text>
               
               {/* Inner Pentagram Star Lines */}
               <circle cx="100" cy="100" r="76" fill="none" stroke="currentColor" strokeWidth="1.0" />
@@ -6329,10 +6413,10 @@ export default function App() {
               {[
                 { id: 'randomizer', name: 'Unformed', desc: 'Masochistic', cards: ["Trade Pelt", "Trade Pelt", "Amoeba"] },
                 { id: 'witchcraft', name: 'Taiga', desc: 'Reliable', cards: ["Mole", "Moose Buck", "Black Goat"] },
-                { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ["Worker Ant", "Flying Ant", "Ant Queen"] },
-                { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ["Warren", "Rat King", "Dire Wolf Pup"] },
+                { id: 'infestation', name: 'Colony', desc: 'Wretched', cards: ["Silkworm", "Flying Ant", "Ant Queen"] },
+                { id: 'skeleton', name: 'Scavengers', desc: 'Ravenous', cards: ["Warren", "Red Stray", "Dire Wolf Pup"] },
                 { id: 'eldritch', name: 'Eldritch', desc: 'Ordained', cards: ["Tadpole", "Mantis", "Raven"] },
-                { id: 'paleozoic', name: 'Paleozoic', desc: 'Deceitful', cards: ["Bullfrog", "Mud Turtle", "Great White"] }
+                { id: 'paleozoic', name: 'Paleozoic', desc: 'Deceitful', cards: ["Hyphae", "Mud Turtle", "Great White"] }
               ].map(d => (
                 <div
                   key={d.id}
