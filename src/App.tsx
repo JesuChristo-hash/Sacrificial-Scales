@@ -8998,9 +8998,18 @@ export default function App() {
                                     } ${isDropping ? 'z-30' : 'z-10'}`}
                                   >
                                     {(!card || isDropping) && (
-                                      <span className="absolute text-xs font-mono font-bold text-amber-900/40 select-none pointer-events-none tracking-widest">
-                                        ↓
-                                      </span>
+                                      <svg
+                                        className="w-5 h-5 sm:w-6 sm:h-6 text-[#c4a47c]/75 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] pointer-events-none select-none"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <line x1="12" y1="4" x2="12" y2="20" />
+                                        <polyline points="18 14 12 20 6 14" />
+                                      </svg>
                                     )}
 
                                    {card && (
