@@ -446,9 +446,9 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Dire Wolf", class: "Canine", attack: 2, health: 5, cost: 3, emoji: "🐺", sigils: ["Double Strike"] },
   { name: "Great White", class: "No Class", attack: 4, health: 2, cost: 3, emoji: "🦈", sigils: ["Waterborne"] },
   { name: "Opossum", class: "No Class", attack: 1, health: 1, boneCost: 2, emoji: "🐀", sigils: [] },
-  { name: "Coyote", class: "Canine", attack: 3, health: 2, boneCost: 4, emoji: "🐺", sigils: [] },
-  { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 3, emoji: "💀", sigils: ["Unkillable"] },
-  { name: "Rattler", class: "Reptile", attack: 3, health: 1, boneCost: 5, emoji: "🐍", sigils: [] },
+  { name: "Coyote", class: "Canine", attack: 2, health: 1, boneCost: 3, emoji: "🐺", sigils: [] },
+  { name: "Cockroach", class: "Insect", attack: 1, health: 1, boneCost: 4, emoji: "💀", sigils: ["Unkillable"] },
+  { name: "Rattler", class: "Reptile", attack: 3, health: 2, boneCost: 5, emoji: "🐍", sigils: [] },
   { name: "Alpha", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Leader"] },
   { name: "House Fly", class: "Insect", attack: 1, health: 2, boneCost: 4, emoji: "🐛", sigils: ["Corpse Eater"] },
   { name: "Wolverine", class: "No Class", attack: 1, health: 3, boneCost: 4, emoji: "🦡", sigils: ["Bloodlust"] },
@@ -476,18 +476,18 @@ export const MAIN_DECK_POOL: CardDef[] = [
   { name: "Skunk", class: "No Class", attack: 0, health: 3, cost: 1, emoji: "🦨", sigils: ["Stinky"] },
 
   // --- Utility, Incubators & Bone Economy ---
-  { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 2, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
+  { name: "Tsuchinoko", class: "Reptile", attack: 1, health: 1, boneCost: 2, emoji: "🐍", sigils: ["Worthy Sacrifice"] },
   { name: "Red Stray", class: "Canine", attack: 1, health: 2, cost: 1, emoji: "🐕", sigils: ["Bone King"] },
   { name: "Red Hound", class: "Canine", attack: 2, health: 3, cost: 2, emoji: "🐕", sigils: ["Bone Digger"] },
   { name: "Red Behemoth", class: "Canine", attack: 2, health: 5, cost: 2, emoji: "🐕", sigils: ["Bone Digger", "Hefty"] },
   { name: "Red Colossus", class: "Canine", attack: 3, health: 9, cost: 3, emoji: "🐕", sigils: ["Hefty", "Bloodlust"] },
-  { name: "Jackal", class: "Canine", attack: 1, health: 3, boneCost: 3, emoji: "🐺", sigils: ["Guardian", "Corpse Eater"] },
+  { name: "Jackal", class: "Canine", attack: 1, health: 2, boneCost: 4, emoji: "🐺", sigils: ["Guardian", "Corpse Eater"] },
   { name: "Armadillo", class: "No Class", attack: 0, health: 3, boneCost: 3, emoji: "🛡️", sigils: ["Armored"] },
   { name: "Cicada", class: "Insect", attack: 2, health: 1, boneCost: 3, emoji: "🦗", sigils: ["Airborne", "Brittle"] },
   { name: "Silkworm", class: "Insect", attack: 0, health: 1, cost: 0, emoji: "🐛", sigils: ["Fledgling"], evolvesInto: "Silken Moth" },
   { name: "Silken Moth", class: "Insect", attack: 2, health: 1, cost: 0, emoji: "🐛", sigils: ["Airborne"] },
   { name: "Hyphae", class: "No Class", attack: 0, health: 2, cost: 0, emoji: "🍄", sigils: ["Morsel", "Fledgling"], evolvesInto: "Mycelium" },
-  { name: "Mycelium", class: "No Class", attack: 2, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] }
+  { name: "Mycelium", class: "No Class", attack: 1, health: 3, cost: 0, emoji: "🍄", sigils: ["Stinky", "Rampager"] }
 ];
 
 export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
@@ -499,6 +499,8 @@ export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
   "Vertibrae": TOKEN_VERTIBRAE,
   "Trade Pelt": TOKEN_PELT,
   "Bee": TOKEN_BEE,
+  "Stone Wall": CARD_STONE_WALL,
+  "Felled Tree": CARD_FELLED_TREE,
 };
 MAIN_DECK_POOL.forEach(c => {
   ALL_CARD_LOOKUP[c.name] = c;
@@ -617,6 +619,10 @@ export function generateCardId(prefix = 'card'): string {
 }
 
 export function cloneCard(def: CardDef, ouroborosBuffs = 0): CardDef {
+  if (!def) {
+    console.error("cloneCard received undefined card definition");
+    return { name: "Void", class: "No Class", attack: 0, health: 1, emoji: "❓", sigils: [] };
+  }
   const c: CardDef = JSON.parse(JSON.stringify(def));
   c.id = generateCardId(c.name.toLowerCase().replace(/\s+/g, '-'));
   if (c.name === "Ouroboros" && ouroborosBuffs > 0) {
@@ -1901,6 +1907,7 @@ export default function App() {
   const [damagedCard, setDamagedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [evolvingCards, setEvolvingCards] = useState<Array<{ isPlayer: boolean; lane: number; phase: 'up' | 'down' }>>([]);
   const [destroyedCard, setDestroyedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
+  const [sacrificingLane, setSacrificingLane] = useState<number | null>(null);
   const [hpFlashingCard, setHpFlashingCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [jitteringCard, setJitteringCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [droppingQueueLane, setDroppingQueueLane] = useState<number | null>(null);
@@ -2343,8 +2350,8 @@ export default function App() {
   };
 
   // --- Playing Cards & Sacrifices ---
-  const handlePlayerSlotClick = useCallback((laneIndex: number, specificHandIndex?: number) => {
-    if (phase !== 'PLAY') return;
+  const handlePlayerSlotClick = useCallback(async (laneIndex: number, specificHandIndex?: number) => {
+    if (phase !== 'PLAY' || sacrificingLane !== null) return;
 
     const activeHandIndex = specificHandIndex !== undefined ? specificHandIndex : selectedHandIndex;
 
@@ -2435,10 +2442,19 @@ export default function App() {
           setDialogueQueue(["Commit to your actions."]);
         }
 
-        if (existingCard.sigils.includes('Many Lives')) {
-          setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
-          addLog(`${existingCard.name} was sacrificed but remains on the board thanks to Many Lives!`);
-        } else {
+        setMarkedForSacrifice(null);
+
+          if (existingCard.sigils.includes('Many Lives')) {
+            setSacrificedUnkillableCardIds(prev => [...prev, existingCard.id || existingCard.name || '']);
+            addLog(`${existingCard.name} was sacrificed but remains on the board thanks to Many Lives!`);
+            return;
+          }
+
+          // Trigger physical collapse animation before clearing board slot
+          setSacrificingLane(laneIndex);
+          await new Promise(res => setTimeout(res, 220));
+          setSacrificingLane(null);
+
           setPlayerBoard(prev => {
             const copy = [...prev];
             copy[laneIndex] = null;
@@ -2456,10 +2472,7 @@ export default function App() {
             setHand(prev => [...prev, applyPlayerTotem(transformAmorphous(returned), activeTotem)]);
             addLog(`${existingCard.name} returned to hand (Unkillable)!`);
           }
-        }
-
-        setMarkedForSacrifice(null);
-        return;
+          return;
       } else {
         setMarkedForSacrifice(laneIndex);
         addLog(`${existingCard.name} marked for sacrifice. Click again to confirm.`);
@@ -2593,16 +2606,18 @@ export default function App() {
         const guardianIdx = enemyBoard.findIndex(c => c?.sigils.includes('Guardian'));
         if (guardianIdx !== -1) {
           const gCard = enemyBoard[guardianIdx];
-          if (gCard?.id) {
-            triggerLateralMove(gCard.id, laneIndex - guardianIdx);
+          if (gCard) {
+            const cardId = gCard.id || `guardian-${guardianIdx}-${Date.now()}`;
+            gCard.id = cardId;
+            await triggerLateralMove(cardId, laneIndex - guardianIdx);
+            setEnemyBoard(prev => {
+              const nextBoard = [...prev];
+              nextBoard[laneIndex] = gCard;
+              nextBoard[guardianIdx] = null;
+              return nextBoard;
+            });
+            addLog(`Enemy ${gCard.name} leaped to guard lane ${laneIndex + 1}!`);
           }
-          setEnemyBoard(prev => {
-            const nextBoard = [...prev];
-            nextBoard[laneIndex] = nextBoard[guardianIdx];
-            nextBoard[guardianIdx] = null;
-            return nextBoard;
-          });
-          addLog(`Enemy ${enemyBoard[guardianIdx]?.name} leaped to guard lane ${laneIndex + 1}!`);
         }
       }
       if (playedCard.sigils.includes('Hoarder')) {
@@ -2943,13 +2958,32 @@ export default function App() {
         }
 
         if (evoName && ALL_CARD_LOOKUP[evoName]) {
-          const evolved = cloneCard(ALL_CARD_LOOKUP[evoName], ouroborosBuffs);
-          evolved.id = card.id;
-          evolved.attack = (evolved.attack || 0) + Math.max(0, (card.attack || 0) - (ALL_CARD_LOOKUP[card.name]?.attack || 0));
-          evolved.health = (evolved.health || 0) + Math.max(0, (card.health || 0) - (ALL_CARD_LOOKUP[card.name]?.health || 0));
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into a ${evoName}!`);
-          return isPlayer ? applyPlayerTotem(evolved, activeTotem) : evolved;
-        } else {
+            const evolved = cloneCard(ALL_CARD_LOOKUP[evoName], ouroborosBuffs);
+            evolved.id = card.id;
+            evolved.attack = (evolved.attack || 0) + Math.max(0, (card.attack || 0) - (ALL_CARD_LOOKUP[card.name]?.attack || 0));
+            evolved.health = (evolved.health || 0) + Math.max(0, (card.health || 0) - (ALL_CARD_LOOKUP[card.name]?.health || 0));
+            if (card.isGoobertClone) evolved.isGoobertClone = true;
+            if (card.isMycologistCombined) evolved.isMycologistCombined = true;
+
+            // Retain altar-transferred crests across evolution
+            const basePreEvoSigils = ALL_CARD_LOOKUP[card.name]?.sigils || [];
+            const inheritedSigils = (card.sigils || []).filter(s => {
+              if (basePreEvoSigils.includes(s)) return false;
+              if (s === 'Fledgling') return false;
+              if (isPlayer && activeTotem && (card.class === activeTotem.head || activeTotem.head === 'ALL Classes') && s === activeTotem.body) {
+                return false;
+              }
+              return true;
+            });
+            inheritedSigils.forEach(s => {
+              if (!evolved.sigils.includes(s)) {
+                evolved.sigils.push(s);
+              }
+            });
+
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} matured into a ${evoName}!`);
+            return isPlayer ? applyPlayerTotem(evolved, activeTotem) : evolved;
+          } else {
           const elder = { ...card };
           elder.name = `Elder ${card.name}`;
           elder.attack = (elder.attack || 0) + 1;
@@ -5111,6 +5145,34 @@ export default function App() {
     setIsEventBusy(false);
     setAltarHostId(null);
     setAltarSacrificeId(null);
+
+    // Detect if the deck has ANY valid (Host, Sacrifice) pair under Altar rules
+    const hasValidPair = masterDeck.some(host => {
+      if (hasMoreSigilsThanOriginal(host)) return false;
+      const hostSigils = host.sigils || [];
+      return masterDeck.some(sac => {
+        if (sac.id === host.id) return false;
+        if (!sac.sigils || sac.sigils.length === 0) return false;
+        const merged = new Set([...hostSigils, ...sac.sigils]);
+        return merged.size < 5;
+      });
+    });
+
+    if (!hasValidPair) {
+      setModalAlert({
+        title: "ALTAR DORMANT",
+        message: "The Altar remains cold and rejects your satchel. You carry only unholy creatures beyond the reach of the ritual.",
+        isWin: true,
+        btnText: "Depart Altar",
+        onAction: () => {
+          setModalAlert(null);
+          setIsEventBusy(false);
+          startNextDuel();
+        }
+      });
+      return;
+    }
+
     setScreen('EVENT_ALTAR');
   };
 
@@ -5209,6 +5271,9 @@ export default function App() {
   };
 
   const claimCostBargain = (type: '1 Blood' | '2 Blood' | '3 Blood' | 'Bones') => {
+    if (isEventBusy) return;
+    setIsEventBusy(true);
+
     let pool = EVENT_CARD_POOL;
     if (type === '1 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 1);
     else if (type === '2 Blood') pool = EVENT_CARD_POOL.filter(c => c.cost === 2);
@@ -5227,6 +5292,7 @@ export default function App() {
       btnText: "Proceed",
       onAction: () => {
         setModalAlert(null);
+        setIsEventBusy(false);
         startNextDuel(undefined, nextDeck);
       }
     });
@@ -5279,11 +5345,14 @@ export default function App() {
 
   // --- Mycologists Event ---
   const initMycologists = () => {
+    setIsEventBusy(false);
     setMycoSelectedIndices([]);
+
     const counts: Record<string, number> = {};
     masterDeck.forEach(c => {
       counts[c.name] = (counts[c.name] || 0) + 1;
     });
+
     const hasDuplicates = Object.values(counts).some(cnt => cnt >= 2);
     setMycoHasDuplicates(hasDuplicates);
 
@@ -5306,6 +5375,8 @@ export default function App() {
 
     setScreen('EVENT_MYCOLOGIST');
   };
+
+  const startMycologistEvent = initMycologists;
 
   const claimMycologistDuplicate = () => {
     if (isEventBusy || !mycoOfferedCard) return;
@@ -5429,21 +5500,24 @@ export default function App() {
   };
 
   // --- Cave Trials Event ---
-  const initCaveTrial = () => {
-    const trialTypes = ['Trial of Bones', 'Trial of Blood', 'Trial of Power', 'Trial of Health', 'Trial of Wisdom', 'Trial of Kin'];
-    const chosen = [...trialTypes].sort(() => Math.random() - 0.5).slice(0, 3);
-    setCaveTrials(chosen);
-    setCaveSelectedTrial(null);
-    setCaveDrawnCards([]);
-    setCavePassed(false);
-    setCaveRewardCards([]);
-    setCaveSelectedRewardIdx(null);
-    setScreen('EVENT_CAVE_TRIAL');
-  };
+    const initCaveTrial = () => {
+      setIsEventBusy(false);
+      const trialTypes = ['Trial of Bones', 'Trial of Blood', 'Trial of Power', 'Trial of Health', 'Trial of Wisdom', 'Trial of Kin'];
+      const chosen = [...trialTypes].sort(() => Math.random() - 0.5).slice(0, 3);
+      setCaveTrials(chosen);
+      setCaveSelectedTrial(null);
+      setCaveDrawnCards([]);
+      setCavePassed(false);
+      setCaveRewardCards([]);
+      setCaveSelectedRewardIdx(null);
+      setScreen('EVENT_CAVE_TRIAL');
+    };
 
   const evaluateCaveTrial = (trialName: string) => {
-    setCaveSelectedTrial(trialName);
-    const shuffled = [...masterDeck].sort(() => Math.random() - 0.5);
+      if (isEventBusy || caveSelectedTrial) return;
+      setIsEventBusy(true);
+      setCaveSelectedTrial(trialName);
+      const shuffled = [...masterDeck].sort(() => Math.random() - 0.5);
     const drawn = shuffled.slice(0, 3);
     setCaveDrawnCards(drawn);
 
@@ -5629,6 +5703,7 @@ export default function App() {
       isDirectAttack?: boolean;
       isDamaged?: boolean;
       isDestroyed?: boolean;
+	  isSacrificing?: boolean;
       isSigilJittering?: boolean;
       isHpFlashing?: boolean;
       isDroppingQueue?: boolean;
@@ -5681,26 +5756,22 @@ export default function App() {
       }
     }
 
-    // 4. Border styling
-    let borderStyle = isSubmergedActive
-      ? 'border-cyan-700/80 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-      : isTotemAffected
-        ? 'border-transparent [filter:drop-shadow(0_0_1px_#93c5fd)_drop-shadow(0_0_2.5px_#3b82f6)_drop-shadow(0_0_6px_rgba(29,78,216,0.85))]'
-        : card.isGoobertClone
-          ? 'border-emerald-700/80 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
-          : card.isMycologistCombined
-            ? 'border-purple-800/80 shadow-[0_0_12px_rgba(168,85,247,0.35)]'
-            : options?.isOpponent
-              ? 'border-[#4a2618] hover:border-red-900'
-              : 'border-[#543b27] hover:border-amber-900';
+    // 4. Alpha-hugging drop-shadow styling (submerged & goobert cards carry natural paper drops, no neon aura)
+    let borderStyle = isTotemAffected
+      ? '[filter:drop-shadow(0_0_2px_#93c5fd)_drop-shadow(0_0_5px_#3b82f6)_drop-shadow(0_0_10px_rgba(29,78,216,0.85))]'
+      : card.isMycologistCombined
+        ? '[filter:drop-shadow(0_0_8px_rgba(168,85,247,0.7))]'
+        : options?.isOpponent
+          ? '[filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.85))] hover:[filter:drop-shadow(0_6px_12px_rgba(185,28,28,0.5))]'
+          : '[filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.85))] hover:[filter:drop-shadow(0_6px_14px_rgba(217,119,6,0.4))]';
 
     if (options?.isSelected) {
       borderStyle = options?.disableHoverScale
-        ? 'border-transparent [filter:drop-shadow(0_0_2px_#fef08a)_drop-shadow(0_0_6px_#eab308)_drop-shadow(0_0_12px_rgba(217,119,6,0.6))] z-40 brightness-105'
-        : 'border-transparent [filter:drop-shadow(0_0_2px_#fef08a)_drop-shadow(0_0_6px_#eab308)_drop-shadow(0_0_12px_rgba(217,119,6,0.6))] -translate-y-3.5 z-40 scale-[1.03] brightness-105';
+        ? '[filter:drop-shadow(0_0_3px_#fef08a)_drop-shadow(0_0_8px_#eab308)_drop-shadow(0_0_16px_rgba(217,119,6,0.85))] z-40 brightness-105'
+        : '[filter:drop-shadow(0_0_3px_#fef08a)_drop-shadow(0_0_8px_#eab308)_drop-shadow(0_0_16px_rgba(217,119,6,0.85))] -translate-y-3.5 z-40 scale-[1.03] brightness-105';
     }
     if (options?.isMarkedSacrifice) {
-      borderStyle = 'border-transparent [filter:drop-shadow(0_0_2px_#fca5a5)_drop-shadow(0_0_6px_#ef4444)_drop-shadow(0_0_12px_rgba(220,38,38,0.75))] animate-sacrifice-shake z-40';
+      borderStyle = '[filter:drop-shadow(0_0_3px_#fca5a5)_drop-shadow(0_0_8px_#ef4444)_drop-shadow(0_0_16px_rgba(220,38,38,0.9))] animate-sacrifice-shake z-40';
     }
 
     const isSummoning = card.id ? summonedCardIds.has(card.id) : false;
@@ -5736,6 +5807,8 @@ export default function App() {
       }
     } else if (options?.isZeroPowerShaking) {
       animClass = 'animate-zero-power-shake z-45';
+	} else if (options?.isSacrificing) {
+      animClass = 'animate-sacrifice-collapse z-40';
     } else if (options?.isDestroyed) {
       animClass = 'animate-destroy-dissolve z-40';
     } else if (options?.isDamaged) {
@@ -5762,10 +5835,10 @@ export default function App() {
     }
 
     const cardStyle: React.CSSProperties = lateralDelta !== undefined ? {
-      transform: `translateX(calc((100% + 0.5rem) * ${lateralDelta}))`,
-      transition: 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
-      zIndex: 35,
-    } : {};
+        transform: `translateX(calc((100% + 0.5rem) * ${lateralDelta}))`,
+        transition: 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        zIndex: 35,
+      } : {};
 
     // Resurface animation plays strictly when entering owner's turn phase, never during combat
     const waterborneClass =
@@ -5777,9 +5850,9 @@ export default function App() {
         ? 'animate-flip-up'
         : '';
 
-    // Decoupled hover transform: static bounding box maintains layout, inner container scales smoothly
-    const shouldHover = options?.isClickable !== false && !options?.disableHoverScale && !options?.isOpponent && !options?.isSelected;
-
+    // Decoupled hover transform: hand cards can inspect/zoom, but board cards remain planted on the table
+      const shouldHover = options?.isClickable !== false && !options?.disableHoverScale && !options?.isOpponent && !options?.isSelected && laneIndex === undefined;
+	  
     // Aged cardboard pulp texture with radial grain and inner rim burn
     let parchmentGradient = 'radial-gradient(circle at 50% 30%, #d8b88a 0%, #c29e6b 70%, #9e7b4c 100%)';
     let parchmentShadow = 'inset 0 0 10px rgba(45, 25, 10, 0.5), inset 0 0 2px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.75)';
@@ -5939,59 +6012,63 @@ export default function App() {
         } ${options?.customScale || ''}`}
       >
         <div
-          className={`relative w-full h-full box-border rounded-sm select-none bg-contain bg-no-repeat bg-center overflow-hidden ${
-            animClass
-              ? 'transition-none'
-              : shouldHover
-                ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
-                : 'transition-transform duration-200 ease-out'
-          } ${borderStyle} ${animClass} ${waterborneClass}`}
-          style={{
-            backgroundImage: `url(${activeCardBase})`,
-            backgroundSize: '100% 100%',
-          }}
-        >
+            className={`relative w-full h-full box-border select-none bg-contain bg-no-repeat bg-center ${
+              animClass
+                ? 'transition-none'
+                : shouldHover
+                  ? 'transition-transform duration-200 ease-out will-change-transform hover:scale-105 hover:-translate-y-2 hover:z-30 cursor-pointer'
+                  : 'transition-transform duration-200 ease-out'
+            } ${borderStyle} ${animClass} ${waterborneClass}`}
+            style={{
+              backgroundImage: `url(${activeCardBase})`,
+              backgroundSize: '100% 100%',
+            }}
+          >
           {/* --- TOP HEADER (8% - 18%) --- */}
-          {/* Bone Cost: Top Left (Bone icon on top, number directly beneath) */}
-          {options?.showCost !== false && card.boneCost !== undefined && card.boneCost > 0 && (
-            <div className="absolute top-[11.5%] left-[7.5%] flex flex-col items-center justify-center pointer-events-none z-10 leading-none">
-              <span className="text-[10px] leading-none filter brightness-75 select-none">🦴</span>
+          {/* Bone Cost: Top Left (Shifted down to clear header text into the arch shoulder) */}
+            {options?.showCost !== false && card.boneCost !== undefined && card.boneCost > 0 && (
+              <div className="absolute top-[14.5%] left-[6.5%] flex flex-col items-center justify-center pointer-events-none z-10 leading-none">
+                <span className="text-[10px] leading-none filter brightness-75 select-none">🦴</span>
+                <span
+                  className="text-[10px] font-black font-mono tracking-tighter leading-none mt-0.5 select-none"
+                  style={{
+                    color: '#0f0e0c',
+                    WebkitTextFillColor: '#0f0e0c',
+                    textShadow: 'none',
+                  }}
+                >
+                  {card.boneCost}
+                </span>
+              </div>
+            )}
+
+            {/* Card Name: Center Header (Rich charcoal grey, retaining heavy stroke & depth) */}
+            <div className="absolute top-[7%] left-[7%] right-[11%] h-[17px] flex items-center justify-center overflow-hidden pointer-events-none z-10">
               <span
-                className="text-[10px] font-black font-mono tracking-tighter leading-none mt-0.5 select-none"
                 style={{
-                  color: '#0f0e0c',
-                  WebkitTextFillColor: '#0f0e0c',
-                  textShadow: 'none',
+                  color: '#262422',
+                  WebkitTextFillColor: '#262422',
+                  WebkitTextStroke: '0.35px #262422',
+                  textShadow: '0 1px 1px rgba(0, 0, 0, 0.3)',
+                  fontWeight: 900,
                 }}
+                className={`font-['Cinzel',_serif] font-black uppercase text-center whitespace-nowrap leading-none pointer-events-none select-none ${
+                  card.name.length >= 15
+                    ? 'text-[7px] tracking-tighter'
+                    : card.name.length >= 13
+                    ? 'text-[8px] tracking-tight'
+                    : card.name.length >= 11
+                    ? 'text-[8.5px] tracking-tight'
+                    : card.name.length >= 9
+                    ? 'text-[9.5px] tracking-normal'
+                    : card.name.length >= 7
+                    ? 'text-[11px] tracking-normal'
+                    : 'text-[12px] tracking-[0.02em]'
+                }`}
               >
-                {card.boneCost}
+                {card.name}
               </span>
             </div>
-          )}
-
-          {/* Card Name: Center Header (Wider boundary, vertical breathing room to prevent clipping) */}
-          <div className="absolute top-[8.5%] left-[13%] right-[17%] h-[15px] flex items-center justify-center overflow-hidden pointer-events-none z-10">
-            <span
-              style={{
-                color: '#0f0e0c',
-                WebkitTextFillColor: '#0f0e0c',
-                WebkitTextStroke: '0.35px #0f0e0c',
-                fontWeight: 900,
-                textShadow: 'none',
-              }}
-              className={`font-['Cinzel',_'Times_New_Roman',_serif] font-black uppercase text-center truncate leading-normal py-[1px] pointer-events-none select-none drop-shadow-none ${
-                card.name.length > 14
-                  ? 'text-[6.5px] tracking-tighter'
-                  : card.name.length > 11
-                  ? 'text-[7.5px] tracking-tight'
-                  : card.name.length > 8
-                  ? 'text-[8.5px] tracking-normal'
-                  : 'text-[9.5px] tracking-wider'
-              }`}
-            >
-              {card.name}
-            </span>
-          </div>
 
           {/* Blood Cost: Vertical Stack Top Right (extra clearance between 2nd & 3rd drops) */}
           {options?.showCost !== false && card.cost !== undefined && card.cost > 0 && (
@@ -6063,13 +6140,13 @@ export default function App() {
             />
           </div>
           {/* --- ACTIVE SIGIL MEDALLIONS (Single row for 1–5, staggered 2-tier for 6–8) --- */}
-          <div
-            className={`absolute left-0 right-0 z-20 pointer-events-none flex justify-center items-center ${
-              displaySigils.length >= 6
-                ? 'top-[65%] max-w-[88%] mx-auto flex-wrap gap-x-1 gap-y-0.5'
-                : `top-[71%] ${displaySigils.length >= 4 ? 'gap-0.5' : displaySigils.length >= 2 ? 'gap-1' : ''}`
-            }`}
-          >
+            <div
+              className={`absolute left-0 right-0 z-20 pointer-events-none flex justify-center items-center -translate-y-[2px] ${
+                displaySigils.length >= 6
+                  ? 'top-[65%] max-w-[88%] mx-auto flex-wrap gap-x-1 gap-y-0.5'
+                  : `top-[71%] ${displaySigils.length >= 4 ? 'gap-0.5' : displaySigils.length >= 2 ? 'gap-1' : ''}`
+              }`}
+            >
             {displaySigils.map((s, idx) => {
               const medallionSizeClass =
                 displaySigils.length >= 6
@@ -6432,23 +6509,12 @@ export default function App() {
           className="absolute inset-0 z-50 flex flex-col items-center justify-between p-3 sm:p-4 overflow-hidden animate-fade-up font-mono select-none"
           style={getScreenBgStyle('deck-selection.png')}
         >
-          {/* Aged Timber Woodgrain Mat & Planks Texture */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40 mix-blend-overlay z-0"
-            style={{
-              backgroundImage: `repeating-linear-gradient(90deg, #130d09 0px, #1a1410 4px, #221a14 120px, #110c08 122px, #1a1410 240px, #0e0a07 242px, #241c16 380px)`,
-            }}
-          />
           {/* Ambient Candlelight Flickering Overlays */}
           <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.22)_0%,rgba(180,83,9,0.08)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0" />
           <div
             className="absolute -top-16 -right-16 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.2)_0%,rgba(217,119,6,0.07)_45%,transparent_70%)] pointer-events-none animate-[pulse_5s_infinite_ease-in-out] blur-2xl z-0"
             style={{ animationDelay: '2.5s' }}
           />
-
-          <h2 className="text-2xl sm:text-3xl font-mono font-bold text-amber-400 tracking-widest my-3">
-              ...Choose your Creatures Wisely...
-            </h2>
 
             <div className="grid grid-cols-3 gap-x-8 gap-y-2 w-full pb-1 max-w-5xl scale-[1.20] origin-center my-auto">
               {[
@@ -6495,7 +6561,7 @@ export default function App() {
                       {d.desc}
                     </p>
                     <span className="mt-1 font-['Cinzel',_serif] text-xs font-bold uppercase tracking-widest text-amber-200/80 group-hover:text-stone-50 transition-all">
-                      SELECT
+                      START
                     </span>
                   </div>
                 </div>
@@ -6508,54 +6574,55 @@ export default function App() {
           GENERIC GAME OVER SCREEN
          ========================================================================= */}
       {screen === 'GAME_OVER' && (
-        <div 
+        <div
           className="absolute inset-0 bg-[#080204] z-50 flex flex-col items-center justify-center p-6 text-center select-none animate-fade-up font-mono"
           style={getScreenBgStyle('gameover.jpg')}
         >
-          <div className="max-w-xl w-full flex flex-col items-center">
+          <div className="max-w-xl w-full flex flex-col items-center bg-[#0d0806]/92 border border-[#3e2316] rounded-sm p-8 shadow-[0_22px_55px_rgba(0,0,0,0.95)] backdrop-blur-[2px]">
             <div className="text-4xl mb-2 filter sepia-[0.4]">{bossState.ritualEndedVoluntarily ? '🕯️' : '💀'}</div>
-            
-            <div className="text-[10px] text-red-700/80 uppercase tracking-widest mb-1">
+
+            <div className="text-[11px] text-amber-600/90 font-bold uppercase tracking-widest mb-1">
               {bossState.ritualEndedVoluntarily ? '+-- RITUAL CONCLUDED --+' : '+-- CATASTROPHIC FAILURE --+'}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-red-500 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-['Cinzel',_serif] font-bold uppercase tracking-widest text-red-500 mb-1 drop-shadow-[0_2px_12px_rgba(239,68,68,0.4)]">
               {bossState.ritualEndedVoluntarily ? 'Ritual Finished' : 'The Old One Awaits You'}
             </h1>
-            
-            <div className="text-xs font-mono uppercase tracking-widest text-red-400/70 mb-8">
+
+            <div className="text-xs font-mono uppercase tracking-widest text-[#cfb794]/80 mb-6">
               {bossState.ritualEndedVoluntarily ? 'The Ritual is finally completed' : 'Your Blood Runs Cold'}
             </div>
 
-            {/* Stats directly on the dark surface with etched borders */}
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-b border-red-950/50 py-6 mb-8 text-left items-center">
+            {/* Stats mounted in a backlit dark cardplate */}
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 border border-[#3e2316] py-5 mb-6 text-left items-center bg-[#150d09]/80 px-6 rounded-sm">
               {/* Left Column: Tracked Stats */}
-              <div className="space-y-2.5 font-mono text-xs border-b sm:border-b-0 sm:border-r border-red-950/50 pb-4 sm:pb-0 sm:pr-6">
+              <div className="space-y-3 font-mono text-xs border-b sm:border-b-0 sm:border-r border-[#3e2316] pb-4 sm:pb-0 sm:pr-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-400 uppercase tracking-wider text-[11px]">Cleared Stages</span>
-                  <span className="text-amber-300 font-bold">{runStats.clearedStages}</span>
+                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cleared Stages</span>
+                  <span className="text-amber-200 font-bold text-sm">{runStats.clearedStages}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-400 uppercase tracking-wider text-[11px]">Cards Sacrificed</span>
-                  <span className="text-red-400 font-bold">{runStats.cardsSacrificed}</span>
+                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Cards Sacrificed</span>
+                  <span className="text-red-300 font-bold text-sm">{runStats.cardsSacrificed}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-400 uppercase tracking-wider text-[11px]">Damage Dealt / Taken</span>
-                  <span className="text-stone-200 font-bold">
-                    {runStats.scaleDamageDealt} <span className="text-stone-600 font-normal">/</span> {runStats.scaleDamageTaken}
+                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Damage Dealt / Taken</span>
+                  <span className="text-stone-100 font-bold text-sm">
+                    {runStats.scaleDamageDealt} <span className="text-stone-500 font-normal">/</span> {runStats.scaleDamageTaken}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-500 uppercase tracking-wider text-[10px]">Bosses Slain</span>
-                  <span className="text-purple-400 font-bold text-xs">{runStats.finalBossesDefeated}</span>
+                  <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Bosses Slain</span>
+                  <span className="text-purple-300 font-bold text-sm">{runStats.finalBossesDefeated}</span>
                 </div>
               </div>
 
-              {/* Right Flank: Scaled proportionally with the battlefield */}
-              <div className="flex flex-col items-center justify-between z-20 scale-110 sm:scale-115 origin-bottom-right">                <div className="text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-1">
+              {/* Right Flank: Clear high-contrast assessment badge */}
+              <div className="flex flex-col items-center justify-between z-20 scale-110 sm:scale-115 origin-center">
+                <div className="text-[11px] font-mono uppercase tracking-widest text-[#a8957f] mb-1 font-semibold">
                   Rank Assessment
                 </div>
-                <div className={`text-6xl font-mono font-bold ${calculateGrade(runStats).color}`}>
+                <div className={`text-6xl font-mono font-bold drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)] ${calculateGrade(runStats).color}`}>
                   {calculateGrade(runStats).letter}
                 </div>
               </div>
@@ -6563,9 +6630,9 @@ export default function App() {
 
             <button
               onClick={handleRestartRun}
-              className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] px-6 py-2.5 select-none cursor-pointer"
+              className="bg-[#1e1510] hover:bg-[#2c1e16] active:bg-[#140e0b] border border-[#482c1d] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.08)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest text-[#e8d7be] hover:text-[#fff] px-8 py-3 select-none cursor-pointer"
             >
-              COMMENCE A NEW RITUAL
+              COMMENCE ANOTHER RITUAL
             </button>
           </div>
         </div>
@@ -7167,24 +7234,31 @@ export default function App() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
-              {(costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const)).map(costType => (
-                <div
-                  key={costType}
-                  onClick={() => claimCostBargain(costType)}
-                  className="p-5 text-center transition-all cursor-pointer group flex flex-col items-center justify-center gap-2 border border-amber-950/40 hover:border-amber-600/70"
-                >
-                  <span className="text-3xl filter sepia-[0.4] group-hover:scale-110 transition-transform">
-                    {costType === 'Bones' ? '🦴' : '🩸'}
-                  </span>
-                  <span className="font-mono font-bold text-amber-200 group-hover:text-amber-100 uppercase tracking-widest text-xs">
-                    {costType}
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] transition-all">
-                    ACCEPT
-                  </span>
-                </div>
-              ))}
-            </div>
+                {(costChoices.length > 0 ? costChoices : (['1 Blood', '2 Blood', 'Bones'] as const)).map(costType => (
+                  <div
+                    key={costType}
+                    onClick={() => {
+                      if (isEventBusy) return;
+                      claimCostBargain(costType);
+                    }}
+                    className={`p-5 text-center transition-all flex flex-col items-center justify-center gap-2 border border-amber-950/40 hover:border-amber-600/70 select-none ${
+                      isEventBusy
+                        ? 'opacity-30 cursor-not-allowed pointer-events-none'
+                        : 'cursor-pointer group'
+                    }`}
+                  >
+                    <span className="text-3xl filter sepia-[0.4] group-hover:scale-110 transition-transform">
+                      {costType === 'Bones' ? '🦴' : '🩸'}
+                    </span>
+                    <span className="font-mono font-bold text-amber-200 group-hover:text-amber-100 uppercase tracking-widest text-xs">
+                      {costType}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] transition-all">
+                      ACCEPT
+                    </span>
+                  </div>
+                ))}
+              </div>
           </div>
         </div>
       )}
@@ -7229,7 +7303,10 @@ export default function App() {
           MYCOLOGISTS EVENT SCREEN
          ========================================================================= */}
       {screen === 'EVENT_MYCOLOGIST' && (
-        <div className="absolute inset-0 bg-[#0d0906] bg-[radial-gradient(circle_at_50%_45%,#1c130c_0%,#0f0b07_55%,#050403_100%)] z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none">
+        <div
+          style={getScreenBgStyle('weaverevent.png')}
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 overflow-y-auto animate-fade-up font-mono select-none"
+        >
           <div className="max-w-4xl w-full flex flex-col items-center justify-center text-center my-auto">
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- THE WEAVER SCOFFS --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">SLEIGHT OF HAND</h1>
@@ -7247,7 +7324,7 @@ export default function App() {
                 )}
                 <button
                   onClick={claimMycologistDuplicate}
-                  disabled={isEventBusy || !mycoOfferedCard}
+                  disabled={!mycoOfferedCard}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
                   COMMIT TO YOUR ACTIONS
@@ -7291,7 +7368,10 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={confirmMycologistCombine}
-                disabled={mycoSelectedIndices.length !== 2 || masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name || isEventBusy}
+                    disabled={
+                      mycoSelectedIndices.length !== 2 ||
+                      masterDeck[mycoSelectedIndices[0]]?.name !== masterDeck[mycoSelectedIndices[1]]?.name
+                    }
                     className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                   >
                     SEW CREATURES
@@ -7362,20 +7442,31 @@ export default function App() {
 
             {!caveSelectedTrial ? (
               <div className="flex flex-col gap-3 max-w-md w-full mb-8">
-                {caveTrials.map(t => (
-                  <div
-                    key={t}
-                    onClick={() => evaluateCaveTrial(t)}
-                    className="p-4 text-center transition-all cursor-pointer group border border-amber-950/40 hover:border-amber-600/70"
-                  >
-                    <div className="font-mono font-bold text-amber-200 group-hover:text-amber-100 text-sm uppercase tracking-widest">
-                      {t}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-widest text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em] mt-1 transition-all">
-                      TRIAL OF THE FLOCK
-                    </div>
-                  </div>
-                ))}
+                {caveTrials.map(t => {
+                    const isDisabled = isEventBusy || Boolean(caveSelectedTrial);
+                    return (
+                      <div
+                        key={t}
+                        onClick={() => !isDisabled && evaluateCaveTrial(t)}
+                        className={`p-4 text-center transition-all border border-dashed rounded-[3px] select-none ${
+                          isDisabled
+                            ? 'opacity-40 cursor-not-allowed pointer-events-none border-[#8c6747]/30 bg-[#150f0a]'
+                            : 'cursor-pointer group border-amber-950/40 hover:border-amber-600/70 bg-[#150f0a]/60 hover:bg-[#150f0a]'
+                        }`}
+                      >
+                        <div className={`font-mono font-bold text-sm uppercase tracking-widest ${
+                          isDisabled ? 'text-stone-500' : 'text-amber-200 group-hover:text-amber-100'
+                        }`}>
+                          {t}
+                        </div>
+                        <div className={`font-mono text-[10px] uppercase tracking-widest mt-1 transition-all ${
+                          isDisabled ? 'text-stone-600' : 'text-amber-200/50 group-hover:text-amber-100 group-hover:tracking-[0.2em]'
+                        }`}>
+                          TRIAL OF THE FLOCK
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             ) : (
               <div className="flex flex-col items-center max-w-2xl w-full">
@@ -7406,16 +7497,17 @@ export default function App() {
                 )}
 
                 <button
-                  onClick={() => {
-                    let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
-                    if (cavePassed && caveSelectedRewardIdx !== null) {
-                      updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
-                      setMasterDeck(updatedDeck);
-                      masterDeckRef.current = updatedDeck;
-                    }
-                    startNextDuel(undefined, updatedDeck);
-                  }}
-                  disabled={cavePassed && caveSelectedRewardIdx === null}
+                    onClick={() => {
+                      setIsEventBusy(false);
+                      let updatedDeck = masterDeckRef.current && masterDeckRef.current.length > 0 ? [...masterDeckRef.current] : [...masterDeck];
+                      if (cavePassed && caveSelectedRewardIdx !== null) {
+                        updatedDeck = [...updatedDeck, cloneCard(caveRewardCards[caveSelectedRewardIdx])];
+                        setMasterDeck(updatedDeck);
+                        masterDeckRef.current = updatedDeck;
+                      }
+                      startNextDuel(undefined, updatedDeck);
+                    }}
+                    disabled={cavePassed && caveSelectedRewardIdx === null}
                   className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 select-none"
                 >
                   PROCEED
@@ -7465,7 +7557,7 @@ export default function App() {
                           } ${isEventBusy ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className="text-[9px] text-[#ab8a68] uppercase font-mono tracking-widest mb-1.5">
-                            {tc.type === 'head' ? 'Tribal Patch' : 'Torso Crest'}
+                            {tc.type === 'head' ? 'Tribal Patch' : 'Threaded Crest'}
                           </div>
 
                           <div className="w-14 h-14 bg-[#20150d] border border-[#4a3422] rounded-[2px] flex items-center justify-center p-1.5 mb-2">
@@ -7544,7 +7636,7 @@ export default function App() {
             ) : (
               <div className="flex flex-col items-center max-w-2xl w-full my-auto text-center">
                 <p className="text-amber-400/70 text-xs mb-8 max-w-md uppercase tracking-wider">
-                  Multiple remnants rest within your kit. Bind your active Effigy by choosing one Tribal Patch and one Torso Crest:
+                  Multiple remnants rest within your kit. Bind your active Effigy by choosing one Tribal Patch and one Threadbound Crest:
                 </p>
 
                 <div className="w-full border-t border-b border-amber-950/40 py-6 mb-8 flex flex-col gap-6">
@@ -7581,7 +7673,7 @@ export default function App() {
 
                   {/* Available Torso Sigils */}
                   <div>
-                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Torso Crests:</div>
+                    <div className="text-xs uppercase font-mono font-bold text-amber-400/80 tracking-widest mb-3">Available Threadbound Crests:</div>
                     <div className="flex flex-wrap gap-3 justify-center">
                       {totemPieces.filter(p => p.type === 'body').length > 0 ? (
                         totemPieces.map((p, pIdx) => {
@@ -7610,7 +7702,7 @@ export default function App() {
                           );
                         })
                       ) : (
-                        <span className="text-xs font-mono text-stone-600 italic">No Torso Crests collected yet.</span>
+                        <span className="text-xs font-mono text-stone-600 italic">No Threadbound Crests collected yet.</span>
                       )}
                     </div>
                   </div>
@@ -7885,7 +7977,7 @@ export default function App() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-xs text-stone-600 italic">No sigils inscribed upon this creature.</div>
+                      <div className="text-xs text-stone-600 italic">No Crests imprinted upon this creature.</div>
                     )}
                   </div>
                 </div>
@@ -8634,78 +8726,117 @@ export default function App() {
                 {/* Lower Tier: End Turn Button & Utility Plaques */}
                 <div className="flex flex-col items-center gap-0 w-full mt-auto mb-1 pt-1 relative scale-105 origin-bottom translate-y-7 sm:translate-y-9">
                   {/* Diegetic Blood-Prick Talisman (Enlarged Plinth) */}
-                  <div className="flex flex-col items-center mt-1 -translate-x-6 sm:-translate-x-8 group select-none cursor-pointer">
-                    <button
-                      onClick={handleTalismanPrick}
-                      disabled={phase !== 'PLAY' || isTalismanPricked}
-                      title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
-                      className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-[#181513] border-2 flex items-center justify-center transition-all duration-300 select-none outline-none ${
-                        isTalismanPricked
-                          ? 'translate-y-0.5 border-[#b91c1c] shadow-[inset_0_3px_6px_rgba(0,0,0,0.95),0_0_24px_rgba(185,28,28,0.9)] cursor-default'
-                          : phase === 'PLAY'
-                            ? 'border-[#3d322a] group-hover:border-[#b91c1c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8),0_4px_12px_rgba(0,0,0,0.7)] group-hover:shadow-[inset_0_2px_6px_rgba(0,0,0,0.9),0_0_24px_rgba(220,38,38,0.7)] cursor-pointer active:translate-y-0.5'
-                            : 'border-[#2a221d] group-hover:border-[#7f1d1d] opacity-75 group-hover:shadow-[0_0_16px_rgba(185,28,28,0.4)] cursor-not-allowed'
-                      }`}
-                    >
-                      <div className="absolute inset-2.5 sm:inset-3 rounded-full border border-dashed border-[#2d241e] group-hover:border-[#7f1d1d]/80 transition-colors duration-300 pointer-events-none" />
-                      <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] sm:w-[104px] sm:h-[104px] overflow-visible pointer-events-none transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(220,38,38,0.7)]">
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="44"
-                          fill="none"
-                          stroke={isTalismanPricked ? "#991b1b" : "#2a221d"}
-                          className="transition-colors duration-300 group-hover:stroke-[#7f1d1d]"
-                          strokeWidth="2.5"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="38"
-                          fill="none"
-                          stroke={isTalismanPricked ? "#b91c1c" : "#221a15"}
-                          className="transition-colors duration-300 group-hover:stroke-[#991b1b]"
-                          strokeWidth="2"
-                          strokeDasharray="4 2"
-                        />
-                        <path
-                          d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
-                          fill={isTalismanPricked ? "#b91c1c" : "transparent"}
-                          stroke={isTalismanPricked ? "#ef4444" : "#ebd9bf"}
-                          className="transition-colors duration-300 group-hover:stroke-[#ef4444]"
-                          strokeWidth="4"
-                          strokeLinejoin="round"
-                          strokeLinecap="round"
-                          style={{
-                            filter: isTalismanPricked ? 'drop-shadow(0 0 10px rgba(185,28,28,0.95))' : undefined,
-                            transition: 'all 0.25s ease-out',
-                          }}
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r={isTalismanPricked ? "8" : "5"}
-                          fill={isTalismanPricked ? "#b91c1c" : "#2a221d"}
-                          className="transition-colors duration-300 group-hover:fill-[#b91c1c]"
-                          style={{
-                            filter: isTalismanPricked ? 'drop-shadow(0 0 8px rgba(185,28,28,1))' : undefined,
-                            transition: 'all 0.25s ease-out',
-                          }}
-                        />
-                      </svg>
-                    </button>
-                    <span
-                      className={`text-[10.5px] sm:text-[11px] font-mono uppercase tracking-widest mt-2 transition-all duration-300 select-none ${
-                        isTalismanPricked
-                          ? 'text-red-400 font-bold drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]'
-                          : phase === 'PLAY'
-                            ? 'text-amber-200/60 group-hover:text-red-400 group-hover:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]'
-                            : 'text-stone-700 group-hover:text-red-900'
-                      }`}
-                    >
-                      {isTalismanPricked ? 'COMMITTED' : 'COMMIT'}
-                    </span>
-                  </div>
+                  <div className="flex flex-col items-center mt-1 -translate-x-6 sm:-translate-x-8 group select-none">
+                      <button
+                        onClick={handleTalismanPrick}
+                        disabled={phase !== 'PLAY' || isTalismanPricked}
+                        title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
+                        className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-gradient-to-b from-[#1b1512] to-[#0d0a09] border-2 flex items-center justify-center select-none outline-none transition-all duration-150 ${
+                          isTalismanPricked
+                            ? 'translate-y-1 scale-[0.98] border-[#991b1b] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(185,28,28,0.75)] cursor-default'
+                            : phase === 'PLAY'
+                              ? 'border-[#3d3128] shadow-[0_4px_0_#080605,0_10px_20px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#b91c1c] hover:shadow-[0_4px_0_#080605,0_12px_24px_rgba(185,28,28,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer active:translate-y-1 active:scale-[0.98] active:shadow-[0_1px_0_#080605,0_2px_6px_rgba(0,0,0,0.95),inset_0_4px_10px_rgba(0,0,0,0.95)]'
+                              : 'border-[#221a15] opacity-60 shadow-[0_3px_0_#080605,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
+                        }`}
+                      >
+                        {/* Outer Inset Groove */}
+                        <div className="absolute inset-2 sm:inset-2.5 rounded-full border border-black/80 shadow-[inset_0_1px_3px_rgba(0,0,0,0.9)] pointer-events-none" />
+                        
+                        {/* Inner Dashed Ring */}
+                        <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-colors duration-200 pointer-events-none ${
+                          isTalismanPricked
+                            ? 'border-red-900/60'
+                            : 'border-[#2e231c] group-hover:border-[#7f1d1d]/80'
+                        }`} />
+
+                        <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] sm:w-[104px] sm:h-[104px] overflow-visible pointer-events-none transition-transform duration-150">
+                          {/* Plinth Outer Bevel */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="44"
+                            fill="none"
+                            stroke={isTalismanPricked ? "#7f1d1d" : "#241b16"}
+                            strokeWidth="2.5"
+                            className="transition-colors duration-200"
+                          />
+                          
+                          {/* Ritual Ring */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="38"
+                            fill="none"
+                            stroke={isTalismanPricked ? "#b91c1c" : "#1c1511"}
+                            strokeWidth="2"
+                            strokeDasharray="4 2"
+                            className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
+                          />
+
+                          {/* Pentagram Star */}
+                          <path
+                            d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
+                            fill={isTalismanPricked ? "#991b1b" : "transparent"}
+                            stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#d6c2a5" : "#44362b"}
+                            className="transition-all duration-200 group-hover:stroke-[#ef4444]"
+                            strokeWidth={isTalismanPricked ? "4.5" : "3.5"}
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                            style={{
+                              filter: isTalismanPricked
+                                ? 'drop-shadow(0 0 12px rgba(239,68,68,0.95))'
+                                : undefined,
+                            }}
+                          />
+
+                          {/* Center Prick Needle & Well */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r={isTalismanPricked ? "8" : "5"}
+                            fill={isTalismanPricked ? "#ef4444" : "#16100d"}
+                            stroke={isTalismanPricked ? "#7f1d1d" : "#38291f"}
+                            strokeWidth="1.5"
+                            className="transition-all duration-200 group-hover:fill-[#7f1d1d] group-hover:stroke-[#b91c1c]"
+                            style={{
+                              filter: isTalismanPricked
+                                ? 'drop-shadow(0 0 10px rgba(239,68,68,1))'
+                                : undefined,
+                            }}
+                          />
+                        </svg>
+                      </button>
+
+                      <pre
+                        className={`font-mono text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 transition-all duration-200 text-center ${
+                          isTalismanPricked
+                            ? 'scale-[0.45] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
+                            : phase === 'PLAY'
+                              ? 'scale-[0.55] text-[#a3907c] group-hover:text-red-400 group-hover:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]'
+                              : 'scale-[0.55] text-stone-700'
+                        }`}
+                      >
+                        {isTalismanPricked ? (
+` ▄████████  ▄██████▄    ▄▄▄▄███▄▄▄▄     ▄▄▄▄███▄▄▄▄    ▄█     ███         ███        ▄████████ ████████▄  
+███    ███ ███    ███ ▄██▀▀▀███▀▀▀██▄ ▄██▀▀▀███▀▀▀██▄ ███  ▀█████████▄ ▀█████████▄  ███    ███ ███   ▀███ 
+███    █▀  ███    ███ ███   ███   ███ ███   ███   ███ ███▌   ▀███▀▀██    ▀███▀▀██   ███    █▀  ███    ███ 
+███        ███    ███ ███   ███   ███ ███   ███   ███ ███▌    ███   ▀     ███   ▀  ▄███▄▄▄     ███    ███ 
+███        ███    ███ ███   ███   ███ ███   ███   ███ ███▌    ███         ███     ▀▀███▀▀▀     ███    ███ 
+███    █▄  ███    ███ ███   ███   ███ ███   ███   ███ ███     ███         ███       ███    █▄  ███    ███ 
+███    ███ ███    ███ ███   ███   ███ ███   ███   ███ ███     ███         ███       ███    ███ ███   ▄███ 
+████████▀   ▀██████▀   ▀█   ███   █▀   ▀█   ███   █▀  █▀    ▄████▀      ▄████▀      ██████████ ████████▀  `
+                        ) : (
+` ▄████████  ▄██████▄    ▄▄▄▄███▄▄▄▄     ▄▄▄▄███▄▄▄▄    ▄█     ███     
+ ███    ███ ███    ███ ▄██▀▀▀███▀▀▀██▄ ▄██▀▀▀███▀▀▀██▄ ███  ▀█████████▄ 
+███    █▀  ███    ███ ███   ███   ███ ███   ███   ███ ███▌   ▀███▀▀██ 
+███        ███    ███ ███   ███   ███ ███   ███   ███ ███▌    ███   ▀ 
+███        ███    ███ ███   ███   ███ ███   ███   ███ ███▌    ███     
+███    █▄  ███    ███ ███   ███   ███ ███   ███   ███ ███     ███     
+███    ███ ███    ███ ███   ███   ███ ███   ███   ███ ███     ███     
+████████▀   ▀██████▀   ▀█   ███   █▀   ▀█   ███   █▀  █▀    ▄████▀    `
+                        )}
+                      </pre>
+                    </div>
 
                   {/* Diegetic Timber Utility Plaques (Lowered & Offset Left) */}
                   <div className="flex flex-col items-center gap-1.5 w-full mt-6 sm:mt-7 -translate-x-6 sm:-translate-x-8">
@@ -8738,8 +8869,8 @@ export default function App() {
               </div> {/* Closes FIXED LEFT FLANK */}
 
               {/* FIXED-WIDTH CENTER BATTLEFIELD: Absolute dead-center in the arena */}
-              <div className={`absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center justify-start w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96] ${isBoardRumbling ? 'animate-board-rumble' : ''}`}>
-                    {/* Opponent Field: Massive Boss 8-Zone Monolith OR Standard Rows 1 & 2 */}
+                    <div className={`absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center justify-start w-[500px] sm:w-[512px] max-w-full z-10 origin-top scale-[0.96] ${isBoardRumbling ? 'animate-board-rumble' : ''}`}>
+                      {/* Opponent Field: Massive Boss 8-Zone Monolith OR Standard Rows 1 & 2 */}
                     {(() => {
                       const massiveBoss = enemyBoard.find(c => c?.isMassive);
                       if (massiveBoss) {
@@ -8864,157 +8995,154 @@ export default function App() {
 
                       return (
                         <>
-                          {/* Row 1: Opponent Queue Row (Subdued dashed cabin perimeter slots) */}
-                          <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 opacity-90 w-full overflow-visible">
-                            {enemyQueue.map((card, idx) => {
-                              const isDropping = droppingQueueLane === idx;
-                              return (
-                                <div
-                                  key={`e-queue-slot-${idx}`}
-                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                    card || isDropping ? 'z-20' : 'z-0'
-                                  } ${
-                                    isDropping ? 'z-30' : 'z-10'
-                                  }`}
-                                >
-                                  {/* Subdued downward queue destination indicator */}
-                                  {(!card || isDropping) && (
-                                    <span className="absolute text-sm font-mono font-bold text-amber-900/50 select-none pointer-events-none animate-pulse">
-                                      [ ↓ ]
-                                    </span>
-                                  )}
+                          {/* Row 1: Opponent Queue Row */}
+                           <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 opacity-90 w-full overflow-visible">
+                             {enemyQueue.map((card, idx) => {
+                               const isDropping = droppingQueueLane === idx;
+                               return (
+                                 <div
+                                   key={`e-queue-slot-${idx}`}
+                                   className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                     card || isDropping ? 'z-20' : 'z-0'
+                                   } ${isDropping ? 'z-30' : 'z-10'}`}
+                                 >
+                                   {(!card || isDropping) && (
+                                     <span className="absolute text-xs font-mono font-bold text-amber-900/40 select-none pointer-events-none tracking-widest">
+                                       ↓
+                                     </span>
+                                   )}
 
-                                  {card && (
-                                    <div
-                                      className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
-                                        card.isDying
-                                          ? 'opacity-0 scale-75 pointer-events-none'
-                                          : isEnemyRetracting
-                                          ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
-                                          : isDropping
-                                            ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-30 pointer-events-none'
-                                            : 'animate-queue-slide-in'
-                                      }`}
-                                    >
-                                      {renderCard(card, {
-                                        isOpponent: true,
-                                        isQueue: true,
-                                        laneIndex: idx,
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                                   {card && (
+                                     <div
+                                       className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
+                                         card.isDying
+                                           ? 'opacity-0 scale-75 pointer-events-none'
+                                           : isEnemyRetracting
+                                           ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
+                                           : isDropping
+                                             ? 'transition-transform duration-300 ease-in-out translate-y-[calc(100%+8px)] z-30 pointer-events-none'
+                                             : 'animate-queue-slide-in'
+                                       }`}
+                                     >
+                                       {renderCard(card, {
+                                         isOpponent: true,
+                                         isQueue: true,
+                                         laneIndex: idx,
+                                         disableHoverScale: true,
+                                       })}
+                                     </div>
+                                   )}
+                                 </div>
+                               );
+                             })}
+                           </div>
 
-                          {/* Row 2: Opponent Active Board Slots */}
-                          <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
-                            {enemyBoard.map((card, idx) => {
-                              const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
-                              const isDamagedThisLane = damagedCard?.isPlayer === false && damagedCard?.lane === idx;
-                              const isDestroyedThisLane = destroyedCard?.isPlayer === false && destroyedCard?.lane === idx;
-                              const isHpFlashingThisLane = hpFlashingCard?.isPlayer === false && hpFlashingCard?.lane === idx;
-                              const isSigilJitterThisLane = jitteringCard?.isPlayer === false && jitteringCard?.lane === idx;
-                              const isDefendingThisLane = activeDefendingLane?.isPlayer === false && activeDefendingLane?.lane === idx;
-                              const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
-                              return (
-                                <div
-                                  key={`e-slot-${idx}`}
-                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                    isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                                  }`}
-                                >
-                                  {!card && (
-                                    <span className="absolute text-xs font-mono font-bold text-red-950/40 select-none pointer-events-none">
-                                      •
-                                    </span>
-                                  )}
-                                  {card ? (
-                                    <div
-                                      className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
-                                        card.isDying || isDestroyedThisLane
-                                          ? 'opacity-0 scale-75 pointer-events-none'
-                                          : isEnemyRetracting
-                                          ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
-                                          : ''
-                                      }`}
-                                    >
-                                      {renderCard(card, {
-                                        isOpponent: true,
-                                        laneIndex: idx,
-                                        isAttacking: isAttackingThisLane,
-                                        attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
-                                        isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
-                                        isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
-                                        isDamaged: isDamagedThisLane,
-                                        isDestroyed: isDestroyedThisLane,
-                                        isHpFlashing: isHpFlashingThisLane,
-                                        isSigilJittering: isSigilJitterThisLane,
-                                        isDefending: isDefendingThisLane,
-                                        isZeroPowerShaking: isZeroPowerThisLane,
-                                      })}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      );
-                    })()}
+                           {/* Row 2: Opponent Active Board Slots */}
+                           <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
+                             {enemyBoard.map((card, idx) => {
+                               const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
+                               const isDamagedThisLane = damagedCard?.isPlayer === false && damagedCard?.lane === idx;
+                               const isDestroyedThisLane = destroyedCard?.isPlayer === false && destroyedCard?.lane === idx;
+                               const isHpFlashingThisLane = hpFlashingCard?.isPlayer === false && hpFlashingCard?.lane === idx;
+                               const isSigilJitterThisLane = jitteringCard?.isPlayer === false && jitteringCard?.lane === idx;
+                               const isDefendingThisLane = activeDefendingLane?.isPlayer === false && activeDefendingLane?.lane === idx;
+                               const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
+                               return (
+                                 <div
+                                   key={`e-slot-${idx}`}
+                                   className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                     isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                   }`}
+                                 >
+                                   {!card && (
+                                     <span className="absolute text-xs font-mono font-bold text-red-950/60 select-none pointer-events-none">
+                                       •
+                                     </span>
+                                   )}
+                                   {card ? (
+                                     <div
+                                       className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
+                                         card.isDying || isDestroyedThisLane
+                                           ? 'opacity-0 scale-75 pointer-events-none'
+                                           : isEnemyRetracting
+                                           ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
+                                           : ''
+                                       }`}
+                                     >
+                                       {renderCard(card, {
+                                         isOpponent: true,
+                                         laneIndex: idx,
+                                         disableHoverScale: true,
+                                         isAttacking: isAttackingThisLane,
+                                         attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
+                                         isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
+                                         isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
+                                         isDamaged: isDamagedThisLane,
+                                         isDestroyed: isDestroyedThisLane,
+                                         isHpFlashing: isHpFlashingThisLane,
+                                         isSigilJittering: isSigilJitterThisLane,
+                                         isDefending: isDefendingThisLane,
+                                         isZeroPowerShaking: isZeroPowerThisLane,
+                                       })}
+                                     </div>
+                                   ) : null}
+                                 </div>
+                               );
+                             })}
+                           </div>
+                         </>
+                       );
+                     })()}
 
-                {/* Row 3: Player Active Board Slots */}
-                    <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
-                      {playerBoard.map((card, idx) => {
-                    const isMarked = markedForSacrifice === idx;
-                    const isAttackingThisLane = activeAttacker?.isPlayer === true && activeAttacker?.lane === idx;
-                    const isDamagedThisLane = damagedCard?.isPlayer === true && damagedCard?.lane === idx;
-                    const isDestroyedThisLane = destroyedCard?.isPlayer === true && destroyedCard?.lane === idx;
-                    const isHpFlashingThisLane = hpFlashingCard?.isPlayer === true && hpFlashingCard?.lane === idx;
-                    const isSigilJitterThisLane = jitteringCard?.isPlayer === true && jitteringCard?.lane === idx;
-                    const isDefendingThisLane = activeDefendingLane?.isPlayer === true && activeDefendingLane?.lane === idx;
-                    const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
-                    return (
-                      <div
-                        key={`p-slot-${idx}`}
-                        onClick={() => handlePlayerSlotClick(idx)}
-                        className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded flex items-center justify-center relative box-border transition-all cursor-pointer overflow-visible ${
-                          isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                        } ${
-                          card
-                            ? 'border border-transparent bg-transparent'
-                            : 'border border-dashed border-[#8c6747]/25 hover:border-[#8c6747]/60 bg-transparent hover:bg-[#1a1410]/20'
-                        }`}
-                      >
-                        {!card && (
-                          <span className="absolute text-xs font-mono font-bold text-amber-900/30 select-none pointer-events-none">
-                            +  +
-                          </span>
-                        )}
-                        {card ? (
-                          renderCard(card, {
-                            laneIndex: idx,
-                            isMarkedSacrifice: isMarked,
-                            isClickable: true,
-                            isAttacking: isAttackingThisLane,
-                            attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
-                            isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
-                            isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
-                            isDamaged: isDamagedThisLane,
-                            isDestroyed: isDestroyedThisLane,
-                            isHpFlashing: isHpFlashingThisLane,
-                            isSigilJittering: isSigilJitterThisLane,
-                            isDefending: isDefendingThisLane,
-                            isZeroPowerShaking: isZeroPowerThisLane,
-                          })
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
+                 {/* Row 3: Player Active Board Slots */}
+                     <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
+                       {playerBoard.map((card, idx) => {
+                     const isMarked = markedForSacrifice === idx;
+                     const isAttackingThisLane = activeAttacker?.isPlayer === true && activeAttacker?.lane === idx;
+                     const isDamagedThisLane = damagedCard?.isPlayer === true && damagedCard?.lane === idx;
+                     const isDestroyedThisLane = destroyedCard?.isPlayer === true && destroyedCard?.lane === idx;
+                     const isHpFlashingThisLane = hpFlashingCard?.isPlayer === true && hpFlashingCard?.lane === idx;
+                     const isSigilJitterThisLane = jitteringCard?.isPlayer === true && jitteringCard?.lane === idx;
+                     const isDefendingThisLane = activeDefendingLane?.isPlayer === true && activeDefendingLane?.lane === idx;
+                     const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === true && zeroPowerShakingCard?.lane === idx;
+                     return (
+                       <div
+                         key={`p-slot-${idx}`}
+                         onClick={() => handlePlayerSlotClick(idx)}
+                         className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer overflow-visible ${
+                           isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                         }`}
+                       >
+                         {!card && (
+                           <span className="absolute text-[11px] font-mono text-amber-900/40 select-none pointer-events-none tracking-widest">
+                             +
+                           </span>
+                         )}
+                         {card ? (
+                           renderCard(card, {
+                             laneIndex: idx,
+                             isMarkedSacrifice: isMarked,
+							 isSacrificing: sacrificingLane === idx,
+                             isClickable: true,
+                             disableHoverScale: true,
+                             isAttacking: isAttackingThisLane,
+                             attackDirection: isAttackingThisLane ? activeAttacker?.direction : undefined,
+                             isAirborneAttack: isAttackingThisLane ? activeAttacker?.isAirborne : undefined,
+                             isDirectAttack: isAttackingThisLane ? activeAttacker?.isDirect : undefined,
+                             isDamaged: isDamagedThisLane,
+                             isDestroyed: isDestroyedThisLane,
+                             isHpFlashing: isHpFlashingThisLane,
+                             isSigilJittering: isSigilJitterThisLane,
+                             isDefending: isDefendingThisLane,
+                             isZeroPowerShaking: isZeroPowerThisLane,
+                           })
+                         ) : null}
+                       </div>
+                     );
+                   })}
+                 </div>
 
-                {/* Row 4: Player Hand */}
+                      {/* Row 4: Player Hand */}
                 <div
                   className="w-full flex items-center justify-center min-h-[140px] sm:min-h-[150px] mt-1 sm:mt-2 mb-0 px-1 overflow-visible z-30"
                   style={{
@@ -9022,58 +9150,67 @@ export default function App() {
                   }}
                 >
                   {hand.map((card, idx) => {
-                    // Loosened overlap ladder so cards fan out legibly without choking the art
-                    let overlapStyle: React.CSSProperties = {};
-                    if (idx > 0) {
-                      if (hand.length <= 2) {
-                        overlapStyle = { marginLeft: '-10px' };
-                      } else if (hand.length === 3) {
-                        overlapStyle = { marginLeft: '-16px' };
-                      } else if (hand.length === 4) {
-                        overlapStyle = { marginLeft: '-24px' };
-                      } else if (hand.length === 5) {
-                        overlapStyle = { marginLeft: '-32px' };
-                      } else if (hand.length === 6) {
-                        overlapStyle = { marginLeft: '-42px' };
-                      } else if (hand.length === 7) {
-                        overlapStyle = { marginLeft: '-52px' };
-                      } else {
-                        overlapStyle = { marginLeft: '-60px' };
-                      }
-                    }
-                    const isSelected = selectedHandIndex === idx;
+                          // Loosened overlap ladder so cards fan out legibly without choking the art
+                          let overlapStyle: React.CSSProperties = {};
+                          if (idx > 0) {
+                            if (hand.length <= 2) {
+                              overlapStyle = { marginLeft: '-10px' };
+                            } else if (hand.length === 3) {
+                              overlapStyle = { marginLeft: '-16px' };
+                            } else if (hand.length === 4) {
+                              overlapStyle = { marginLeft: '-24px' };
+                            } else if (hand.length === 5) {
+                              overlapStyle = { marginLeft: '-32px' };
+                            } else if (hand.length === 6) {
+                              overlapStyle = { marginLeft: '-42px' };
+                            } else if (hand.length === 7) {
+                              overlapStyle = { marginLeft: '-52px' };
+                            } else {
+                              overlapStyle = { marginLeft: '-60px' };
+                            }
+                          }
+                          const isSelected = selectedHandIndex === idx;
 
-                    return (
-                      /* Stationary Slot Container: captures mouse events & maintains layout geometry */
-                      <div
-                        key={card.id || `hand-${card.name}-${idx}`}
-                        onClick={() => selectHandCard(idx)}
-                        style={{
-                          ...overlapStyle,
-                          ...(isCinematic
-                            ? { transformStyle: 'preserve-3d' }
-                            : { backfaceVisibility: 'hidden' }),
-                        }}
-                        className={`group/handcard relative shrink-0 cursor-pointer select-none rounded-lg before:absolute before:-inset-x-3 before:-inset-y-6 before:z-0 before:content-[''] ${
-                          isSelected ? 'z-40' : 'hover:z-30 z-10'
-                        }`}
-                      >
-                        {/* Animated Card Surface: Decoupled from hit target with dampened spring physics */}
-                        <div
-                          style={{
-                            transition: 'transform 220ms cubic-bezier(0.2, 0, 0, 1), box-shadow 220ms cubic-bezier(0.2, 0, 0, 1), z-index 0ms',
-                            transitionDelay: '50ms',
-                            animationDelay: `${idx * 40}ms`,
-                            ...(isCinematic
-                              ? { transformStyle: 'preserve-3d' }
-                              : { backfaceVisibility: 'hidden', transform: 'translateZ(0)' }),
-                          }}
-                          className={`relative rounded-lg animate-card-draw group-hover/handcard:transition-delay-[0ms] ${
-                            isSelected
-                              ? 'z-40 -translate-y-3.5 ring-2 ring-amber-400 ring-offset-2 ring-offset-[#0d0906] shadow-[0_0_22px_rgba(251,191,36,0.75)]'
-                              : 'shadow-[0_12px_24px_-2px_rgba(0,0,0,0.9),0_6px_12px_rgba(0,0,0,0.75)] group-hover/handcard:z-30 group-hover/handcard:-translate-y-3 group-hover/handcard:shadow-[0_20px_35px_rgba(0,0,0,0.95)]'
-                          }`}
-                        >
+                          // Physical hand arc: outer cards dip and tilt outward from the palm
+                          const mid = (hand.length - 1) / 2;
+                          const offsetFromCenter = hand.length > 1 ? idx - mid : 0;
+                          const fanAngle = Math.max(-11, Math.min(11, offsetFromCenter * 2.8));
+                          const fanDipY = Math.min(18, Math.pow(Math.abs(offsetFromCenter), 1.65) * 2.4);
+
+                          return (
+                            /* Stationary Slot Container: captures mouse events & maintains layout geometry */
+                            <div
+                              key={card.id || `hand-${card.name}-${idx}`}
+                              onClick={() => selectHandCard(idx)}
+                              style={{
+                                ...overlapStyle,
+                                transform: `translateY(${fanDipY}px) rotate(${fanAngle}deg)`,
+                                transformOrigin: '50% 120%',
+                                transition: 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+                                ...(isCinematic
+                                  ? { transformStyle: 'preserve-3d' }
+                                  : { backfaceVisibility: 'hidden' }),
+                              }}
+                              className={`group/handcard relative shrink-0 cursor-pointer select-none hover:!rotate-0 hover:!translate-y-0 before:absolute before:-inset-x-3 before:-inset-y-6 before:z-0 before:content-[''] ${
+                                 isSelected ? 'z-40 !rotate-0 !translate-y-0' : 'hover:z-30 z-10'
+                               }`}
+                             >
+                               {/* Animated Card Surface: Decoupled from hit target with dampened spring physics */}
+                               <div
+                                 style={{
+                                   transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), filter 220ms cubic-bezier(0.22, 1, 0.36, 1), z-index 0ms',
+                                   transitionDelay: '30ms',
+                                   animationDelay: `${idx * 40}ms`,
+                                   ...(isCinematic
+                                     ? { transformStyle: 'preserve-3d' }
+                                     : { backfaceVisibility: 'hidden', transform: 'translateZ(0)' }),
+                                 }}
+                                 className={`relative animate-card-draw group-hover/handcard:transition-delay-[0ms] ${
+                                   isSelected
+                                     ? 'z-40 -translate-y-4 scale-[1.06]'
+                                     : 'group-hover/handcard:z-30 group-hover/handcard:-translate-y-4 group-hover/handcard:scale-[1.06]'
+                                 }`}
+                               >
                           {renderCard(card, {
                             isSelected,
                             isClickable: phase === 'PLAY',
@@ -9102,25 +9239,31 @@ export default function App() {
     }`}
     title={`Runnel Balance: ${scale === 0 ? '0 (Balanced)' : scale > 0 ? `+${scale}` : `${scale}`}`}
   >
-    {/* Top Endpoint: Rusted Iron Drain Grate (+5 Opponent Defeat) */}
+    {/* Top Endpoint: Rusted Iron Drain Grate (+5 Opponent Defeat / Overkill Basin) */}
     <div
-      className="w-7 h-2.5 bg-[#1c140e] border border-[#3d2a1c] rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner"
+      className={`w-7 h-2.5 rounded-[1px] flex items-center justify-evenly px-0.5 shadow-inner transition-all duration-500 relative overflow-hidden ${
+        isOverkill || scale >= 5
+          ? 'bg-red-950 border border-red-500 shadow-[0_0_20px_rgba(239,68,68,1)]'
+          : 'bg-[#1c140e] border border-[#3d2a1c]'
+      }`}
       title="Opponent Defeat (+5)"
     >
-      <div className="w-[1px] h-full bg-[#0a0807]" />
-      <div className="w-[1px] h-full bg-[#0a0807]" />
-      <div className="w-[1px] h-full bg-[#0a0807]" />
-      <div className="w-[1px] h-full bg-[#0a0807]" />
+      {(isOverkill || scale >= 5) && (
+        <div className="absolute inset-0 bg-gradient-to-t from-red-600 via-red-800 to-red-950 opacity-95 animate-pulse shadow-[inset_0_0_6px_rgba(254,202,202,0.9)]" />
+      )}
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
+      <div className={`w-[1px] h-full z-10 transition-colors duration-300 ${isOverkill || scale >= 5 ? 'bg-black/90' : 'bg-[#0a0807]'}`} />
     </div>
 
-    {/* Central Conduit Chamber with Chiseled Notches & Vertical Runnel Groove */}
-    <div className="relative flex-1 w-full flex items-center justify-center my-1.5">
-      {/* 11 Chiseled Tally Notches (-5 to +5) along the slate slab */}
+    {/* Central Conduit Chamber: Slate Notches + Diegetic Glass Ampoule Column */}
+    <div className="relative flex-1 w-full flex items-center justify-center my-1">
+      {/* 11 Chiseled Tally Notches (-5 to +5) in the Slate Slab Behind the Glass */}
       <div className="absolute inset-y-0 w-full flex flex-col justify-between items-center pointer-events-none py-0.5 z-0">
         {[5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5].map((val) => {
           const isMidpoint = val === 0;
           const isCurrent = scale === val;
-          const isTurnOneBypass = val === 4 && turnNumber === 1;
 
           return (
             <div
@@ -9136,51 +9279,98 @@ export default function App() {
                       : 'w-4 h-[1px] bg-[#2a211a]'
                 }`}
               />
-
-              {/* Diegetic Arterial Shunt Petcock (Active strictly on Turn 1 at +4) */}
-              {isTurnOneBypass && (
-                <div
-                  className="absolute -right-3.5 flex items-center gap-0.5 pointer-events-auto"
-                  title="Arterial Bypass Petcock: Turn 1 hydraulic limit. Excess blood vents to collection reservoir."
-                >
-                  <div
-                    className={`w-2 h-1 border border-[#4a2e18] rounded-r-[1px] transition-colors duration-300 ${
-                      scale >= 4
-                        ? 'bg-red-950 border-red-700 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
-                        : 'bg-[#1e150f]'
-                    }`}
-                  />
-                  {scale >= 4 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping shadow-[0_0_8px_rgba(239,68,68,1)]" />
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
-      {/* Central Hydrostatic Blood Column Groove */}
-      <div className="w-3.5 absolute top-1 bottom-1 left-1/2 -translate-x-1/2 bg-[#0a0807] rounded-full overflow-hidden shadow-inner z-10">
-        {(() => {
-          const fillPercent = Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
-          return (
-            <div
-              className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-                scaleRumble ? 'animate-pulse scale-x-110 filter brightness-125' : ''
-              }`}
-              style={{
-                height: `${fillPercent}%`,
-                background: 'linear-gradient(to top, #7f1d1d 0%, #b91c1c 40%, #dc2626 75%, #ef4444 100%)',
-                backgroundColor: '#b91c1c',
-                boxShadow: '0 0 16px rgba(239, 68, 68, 0.9), inset 0 0 4px rgba(254, 202, 202, 0.5)',
-              }}
-            >
-              {/* Surface Meniscus */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#fecaca] shadow-[0_0_10px_rgba(254,202,202,1)]" />
-            </div>
-          );
-        })()}
+      {/* Overkill Ambient Flood Channel (Fills Upper Headspace When Damaged Beyond +5) */}
+      {(isOverkill || scale >= 5) && (
+        <div className="absolute top-0 inset-x-2 h-14 bg-gradient-to-b from-red-600/30 via-red-950/20 to-transparent pointer-events-none animate-pulse z-0" />
+      )}
+
+      {/* THE GLASS AMPOULE (Integrated Cylindrical Specimen Tube) */}
+      <div className="relative w-4 h-full flex flex-col items-center justify-between z-10">
+        {/* Top Brass Ferrule Collar */}
+        <div className="w-5 h-1.5 bg-gradient-to-b from-[#3a281c] to-[#1d140e] border border-[#523927] rounded-t-xs shadow-sm z-20" />
+
+        {/* Glass Cylinder Body */}
+        <div className="relative w-full flex-1 rounded-full bg-[#0a0505] border border-white/20 shadow-[inset_0_2px_8px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col justify-end">
+          {/* Glass Specular Glint (Continuous Curved Longitudinal Reflection) */}
+          <div className="absolute top-0 bottom-0 left-[2px] w-[1.5px] bg-gradient-to-b from-white/40 via-white/10 to-white/20 rounded-full z-20 pointer-events-none" />
+          <div className="absolute top-0 bottom-0 right-[2px] w-[1px] bg-white/10 rounded-full z-20 pointer-events-none" />
+
+          {/* Organic Viscous Blood Column */}
+          {(() => {
+            const fillPercent = isOverkill || scale >= 5
+              ? 100
+              : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
+
+            return (
+              <div
+                className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                  scaleRumble || isOverkill
+                    ? 'animate-pulse filter brightness-110'
+                    : ''
+                }`}
+                style={{
+                  height: `${fillPercent}%`,
+                  background: 'linear-gradient(to top, #1c0205 0%, #43050c 18%, #6e0b15 42%, #991320 68%, #ba1929 88%, #dc2626 100%)',
+                  boxShadow: isOverkill || scale >= 5
+                    ? '0 0 20px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(254, 202, 202, 0.4)'
+                    : '0 0 10px rgba(185, 28, 28, 0.75), inset 0 0 4px rgba(254, 202, 202, 0.25)',
+                }}
+              >
+                {/* Surface Liquid Meniscus */}
+                <div className="absolute top-0 inset-x-0 h-[2.5px] rounded-t-full bg-gradient-to-r from-red-400 via-rose-100 to-red-400 shadow-[0_0_6px_rgba(254,202,202,0.9)] z-10" />
+
+                {/* Overkill Arterial Surge */}
+                {(isOverkill || scale >= 5) && (
+                  <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Turn 1 OTK Limit Glass Fracture on the Ampoule (At +4 Height, 10% from Top) */}
+          {turnNumber === 1 && (
+            scale >= 4 ? (
+              /* Broken Ampoule Glass at +4 Pressure */
+              <div
+                className="absolute top-[10%] -translate-y-1/2 -left-1 -right-1 h-8 pointer-events-none z-30 select-none overflow-visible"
+                title="Arterial Limit Breached: Ampoule shattered at +4 to vent lethal pressure"
+              >
+                <svg viewBox="0 0 24 32" className="w-full h-full overflow-visible drop-shadow-[0_0_6px_rgba(239,68,68,0.95)]">
+                  {/* Jagged glass fracture line */}
+                  <path d="M 1 16 L 7 12 L 12 18 L 18 11 L 23 15" fill="none" stroke="#fecaca" strokeWidth="1.2" strokeLinecap="round" />
+                  {/* Radiating hairline cracks */}
+                  <path d="M 7 12 L 6 6 L 10 2" fill="none" stroke="#fca5a5" strokeWidth="0.8" opacity="0.85" />
+                  <path d="M 12 18 L 11 26 L 16 30" fill="none" stroke="#fca5a5" strokeWidth="0.8" opacity="0.85" />
+                  <path d="M 7 12 L 13 10 L 17 5" fill="none" stroke="#ef4444" strokeWidth="0.8" />
+                  {/* Flaked glass chip */}
+                  <polygon points="13,14 16,11 15,16" fill="#ffffff" opacity="0.9" />
+                </svg>
+
+                {/* Bleeding exterior drip running down the ampoule face */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-1 h-14 bg-gradient-to-b from-red-500 via-red-800 to-transparent rounded-full shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
+
+                {/* Arterial vent spark */}
+                <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-400 animate-ping shadow-[0_0_8px_rgba(239,68,68,1)]" />
+              </div>
+            ) : (
+              /* Pre-Scored Fragile Diamond Score Line on Intact Glass at +4 */
+              <div
+                className="absolute top-[10%] -translate-y-1/2 inset-x-0 h-[1.5px] z-25 pointer-events-none"
+                title="Hydraulic Limit (+4): Glass pre-scored to fracture under lethal first-turn pressure"
+              >
+                <div className="w-full h-full border-t border-dashed border-red-400/40 shadow-[0_0_3px_rgba(239,68,68,0.3)]" />
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Bottom Brass Ferrule Collar */}
+        <div className="w-5 h-1.5 bg-gradient-to-b from-[#1d140e] to-[#3a281c] border border-[#523927] rounded-b-xs shadow-sm z-20" />
       </div>
     </div>
 

@@ -70,34 +70,31 @@
 
 @keyframes player-strike-lunge {
   0% { transform: translateY(0); }
-  50% { transform: translateY(-28px) scale(1.1); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  50% { transform: translateY(-28px) scale(1.08); filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.9)); }
   100% { transform: translateY(0); }
 }
 .animate-player-strike {
   animation: player-strike-lunge 0.85s ease-in-out;
-  border-color: #38bdf8 !important;
   z-index: 40 !important;
 }
 
 @keyframes player-strike-lunge-left {
   0% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(-38px, -28px) scale(1.1) rotate(-8deg); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  50% { transform: translate(-38px, -28px) scale(1.08) rotate(-8deg); filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.9)); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 .animate-player-strike-left {
   animation: player-strike-lunge-left 0.85s ease-in-out;
-  border-color: #38bdf8 !important;
   z-index: 40 !important;
 }
 
 @keyframes player-strike-lunge-right {
   0% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(38px, -28px) scale(1.1) rotate(8deg); box-shadow: 0 0 28px rgba(56, 189, 248, 0.95); }
+  50% { transform: translate(38px, -28px) scale(1.08) rotate(8deg); filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.9)); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 .animate-player-strike-right {
   animation: player-strike-lunge-right 0.85s ease-in-out;
-  border-color: #38bdf8 !important;
   z-index: 40 !important;
 }
 
@@ -246,96 +243,62 @@
    COMBAT ANIMATION SPECIFICATIONS
    ========================================================================= */
 
-/* Front-Row Direct Summon: Vertical bottom-to-top reveal over ~0.3s with rising threshold edge glow */
-@keyframes summon-vertical-wipe {
+/* Card Placement Slam: Tactile drop with impact compression and settling rebound */
+@keyframes card-slam {
   0% {
-    clip-path: inset(100% 0 0 0 round 0.5rem);
-    opacity: 0.15;
+    opacity: 0;
+    transform: translateY(-22px) scale(1.18);
+    filter: drop-shadow(0 24px 28px rgba(0, 0, 0, 0.95));
   }
-  30% {
-    opacity: 0.65;
+  45% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.08);
   }
-  70% {
-    opacity: 0.95;
+  72% {
+    transform: translateY(2px) scale(0.95);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(180, 130, 80, 0.3));
+  }
+  88% {
+    transform: translateY(-1px) scale(1.02);
   }
   100% {
-    clip-path: inset(0% 0 0 0 round 0.5rem);
     opacity: 1;
-  }
-}
-
-@keyframes summon-threshold-rise {
-  0% {
-    top: 100%;
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 0.95;
-  }
-  100% {
-    top: 0%;
-    opacity: 0;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85));
   }
 }
 
 .animate-summon-wipe {
-  animation: summon-vertical-wipe 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  will-change: clip-path, opacity;
+  animation: card-slam 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  will-change: transform, filter, opacity;
   position: relative;
 }
 
-.animate-summon-wipe::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 5px;
-  top: 100%;
-  pointer-events: none;
-  z-index: 50;
-  border-radius: 9999px;
-  background: linear-gradient(
-    90deg,
-    rgba(56, 189, 248, 0) 0%,
-    rgba(125, 211, 252, 0.8) 18%,
-    rgba(255, 255, 255, 0.95) 50%,
-    rgba(125, 211, 252, 0.8) 82%,
-    rgba(56, 189, 248, 0) 100%
-  );
-  box-shadow:
-    0 2px 8px 1px rgba(56, 189, 248, 0.85),
-    0 4px 16px 2px rgba(14, 165, 233, 0.5);
-  animation: summon-threshold-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-/* Card Damaged: 0.15s shake animation and red hue flash */
+/* Card Damaged: Hit-stop flinch, contrast burst, and violent recoil */
 @keyframes card-damage-shake {
   0% {
-    transform: translate(0, 0);
-    filter: brightness(1);
+    transform: scale(1) translate(0, 0);
+    filter: brightness(1) contrast(1);
   }
-  20% {
-    transform: translate(-5px, 2px);
-    filter: brightness(1.6) drop-shadow(0 0 10px rgba(239, 68, 68, 0.9)) saturate(1.8);
+  15% {
+    transform: scale(0.93) translateY(2px);
+    filter: brightness(2.4) contrast(1.6) sepia(0.3) drop-shadow(0 0 16px rgba(220, 38, 38, 1));
   }
-  40% {
-    transform: translate(5px, -3px);
-    filter: brightness(1.9) drop-shadow(0 0 14px rgba(239, 68, 68, 1)) saturate(2.2);
+  35% {
+    transform: scale(1.05) translate(-7px, -3px);
+    filter: brightness(1.8) contrast(1.3) drop-shadow(0 0 12px rgba(220, 38, 38, 0.85));
   }
   60% {
-    transform: translate(-4px, 3px);
-    filter: brightness(1.5) drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+    transform: scale(0.98) translate(6px, 3px);
+    filter: brightness(1.3) contrast(1.1) drop-shadow(0 0 6px rgba(185, 28, 28, 0.6));
   }
   80% {
-    transform: translate(3px, -2px);
-    filter: brightness(1.2) drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+    transform: scale(1.01) translate(-2px, -1px);
+    filter: brightness(1.05);
   }
   100% {
-    transform: translate(0, 0);
-    filter: brightness(1);
+    transform: scale(1) translate(0, 0);
+    filter: brightness(1) contrast(1);
   }
 }
 .animate-damage-shake {
@@ -344,22 +307,59 @@
   z-index: 45 !important;
 }
 
-/* Card Destroyed: Upward vertical wipe/dissolve (translateY(-15px) + opacity fade out over 0.2s) */
+/* Combat Destruction: Heavy impact shudder and downward crumple into the board */
 @keyframes card-destroy-dissolve {
   0% {
-    transform: translateY(0);
+    transform: translateY(0) scale(1) rotate(0deg);
     opacity: 1;
     filter: brightness(1);
   }
+  25% {
+    transform: translateY(-4px) scale(1.03) rotate(-2deg);
+    filter: brightness(1.3) contrast(1.2);
+  }
   100% {
-    transform: translateY(-15px);
+    transform: translateY(16px) scale(0.9, 0.6) rotate(3deg);
     opacity: 0;
-    filter: brightness(0.4) blur(1px);
+    filter: brightness(0.2) contrast(1.4) blur(1px);
   }
 }
 .animate-destroy-dissolve {
   animation: card-destroy-dissolve 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
   pointer-events: none !important;
+}
+
+/* Sacrifice Collapse: Crimson pulse, blood-wash, and flat collapse into the altar slab */
+@keyframes card-sacrifice-collapse {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    filter: brightness(1) saturate(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.06) translateY(-3px) rotate(-1.5deg);
+    filter: brightness(1.4) saturate(2) drop-shadow(0 0 10px rgba(220, 38, 38, 0.9));
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.7, 0.22) translateY(24px) rotate(2deg);
+    filter: brightness(0.12) saturate(0.2) blur(0.5px);
+    opacity: 0;
+  }
+}
+.animate-sacrifice-collapse {
+  animation: card-sacrifice-collapse 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  pointer-events: none !important;
+  position: relative;
+}
+.animate-sacrifice-collapse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.65) 0%, rgba(120, 15, 15, 0.9) 70%, transparent 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  border-radius: 3px;
 }
 
 /* Direct Player/Enemy Damage: Screen-rumble shake applied across all board zones for 0.2s */
@@ -436,7 +436,7 @@
 
 @keyframes lunge-p-direct {
   0% { transform: translateY(0); }
-  70% { transform: translateY(-60px) scale(1.08); box-shadow: 0 0 22px rgba(56, 189, 248, 0.85); }
+  70% { transform: translateY(-60px) scale(1.08); filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.95)); }
   100% { transform: translateY(0); }
 }
 .animate-lunge-p-direct {
@@ -446,7 +446,7 @@
 
 @keyframes lunge-p-airborne {
   0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-  70% { transform: translateY(-60px) scale(1.12); filter: drop-shadow(0 22px 26px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 18px rgba(147, 197, 253, 0.85)); }
+  70% { transform: translateY(-60px) scale(1.12); filter: drop-shadow(0 24px 28px rgba(0, 0, 0, 0.95)); }
   100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
 }
 .animate-lunge-p-airborne {
@@ -487,7 +487,7 @@
 
 @keyframes lunge-e-direct {
   0% { transform: translateY(0); }
-  70% { transform: translateY(60px) scale(1.08); box-shadow: 0 0 22px rgba(239, 68, 68, 0.85); }
+  70% { transform: translateY(60px) scale(1.08); filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.95)); }
   100% { transform: translateY(0); }
 }
 .animate-lunge-e-direct {
