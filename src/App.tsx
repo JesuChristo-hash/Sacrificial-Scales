@@ -1466,7 +1466,7 @@ export const ChiptuneAudio: any = {
 const chiptuneAudio = ChiptuneAudio;
 
 // Built-in Web Audio API sound generator for game events
-const playSound = (type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory') => {
+const playSound = (type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor') => {
   try {
     const sfxMult = typeof ChiptuneAudio.sfxVolume === 'number' ? ChiptuneAudio.sfxVolume : 0.8;
     if (sfxMult <= 0) return;
@@ -1552,6 +1552,15 @@ const playSound = (type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone'
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
       osc.start(now);
       osc.stop(now + 0.7);
+    } else if (type === 'armor') {
+        // High-frequency metallic iron clang / deflection ring
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1150, now);
+        osc.frequency.exponentialRampToValueAtTime(380, now + 0.18);
+        gain.gain.setValueAtTime(0.35 * sfxMult, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
     }
   } catch {
     // Audio context may require user gesture
@@ -1584,6 +1593,148 @@ const getAudioEngine = () => {
     if (typeof (window as any).chiptuneAudio !== 'undefined') return (window as any).chiptuneAudio;
   } catch (_) {}
   return null;
+};
+
+// --- Diegetic Talisman Watcher Eye (Tracks Cursor via Direct DOM Transform) ---
+const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPricked }) => {
+  const socketRef = useRef<SVGGElement>(null);
+  const pupilGroupRef = useRef<SVGGElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!socketRef.current || !pupilGroupRef.current) return;
+      const btn = socketRef.current.closest('button');
+      if (!btn) return;
+
+      const rect = btn.getBoundingClientRect();
+      const btnCenterX = rect.left + rect.width / 2;
+      const btnCenterY = rect.top + rect.height / 2;
+      const radius = rect.width / 2;
+
+      const dx = e.clientX - btnCenterX;
+      const dy = e.clientY - btnCenterY;
+      const dist = Math.hypot(dx, dy);
+
+      // Only track while the cursor is inside the button boundary; center immediately when outside
+      if (dist > radius || dist < 1) {
+        pupilGroupRef.current.setAttribute('transform', 'translate(0, 0)');
+        return;
+      }
+
+      const angle = Math.atan2(dy, dx);
+      const maxOffset = 3.6; // SVG units (contained within socket r=8.5)
+      const pull = Math.min(dist / (radius * 0.85), 1);
+      const eased = Math.sin(pull * (Math.PI / 2));
+      const ox = (Math.cos(angle) * eased * maxOffset).toFixed(2);
+      const oy = (Math.sin(angle) * eased * maxOffset).toFixed(2);
+
+      pupilGroupRef.current.setAttribute('transform', `translate(${ox}, ${oy})`);
+    };
+
+    const handleMouseLeave = () => {
+      if (pupilGroupRef.current) {
+        pupilGroupRef.current.setAttribute('transform', 'translate(0, 0)');
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
+
+  return (
+    <g ref={socketRef} className="pointer-events-none select-none">
+      <defs>
+        {/* Clips the pupil and iris cleanly behind the ocular socket rim */}
+        <clipPath id="talismanEyeSocketClip">
+          <circle cx="50" cy="50" r="8.2" />
+        </clipPath>
+      </defs>
+
+      {/* Sclera Base / Well */}
+      <circle
+        cx="50"
+        cy="50"
+        r="8.5"
+        fill={isTalismanPricked ? "#220507" : "#130c09"}
+        stroke={isTalismanPricked ? "#7f1d1d" : "#2a1b14"}
+        strokeWidth="1.2"
+        className="transition-colors duration-200"
+      />
+
+      {/* Organic Capillaries in Sclera */}
+      <path
+        d="M 44.5 48.5 Q 46.5 49.5 48 49.8 M 55.5 51 Q 53.5 50.5 52 50.2 M 49.5 44 Q 50 46 50.2 47.5"
+        stroke={isTalismanPricked ? "rgba(239, 68, 68, 0.7)" : "rgba(185, 28, 28, 0.35)"}
+        strokeWidth="0.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Moving Ocular Group (Tracks Player Cursor) */}
+      <g clipPath="url(#talismanEyeSocketClip)">
+          <g ref={pupilGroupRef} className="transition-transform duration-150 ease-out">
+          {/* Iris Ring */}
+          <circle
+            cx="50"
+            cy="50"
+            r={isTalismanPricked ? "6.2" : "5.4"}
+            fill={isTalismanPricked ? "#dc2626" : "#45140e"}
+            stroke={isTalismanPricked ? "#ef4444" : "#7f1d1d"}
+            strokeWidth="0.8"
+            className="transition-colors duration-200 group-hover:fill-[#991b1b] group-hover:stroke-[#ef4444]"
+          />
+
+          {/* Centermost Circle: The Living Pupil */}
+          <circle
+            cx="50"
+            cy="50"
+            r={isTalismanPricked ? "3.8" : "3.0"}
+            fill={isTalismanPricked ? "#7f1d1d" : "#080403"}
+            stroke={isTalismanPricked ? "#ef4444" : "#1a0805"}
+            strokeWidth="0.6"
+            className="transition-all duration-200 group-hover:fill-[#000000]"
+          />
+
+          {/* Wet Specular Catchlight Glints */}
+          <circle
+            cx="48.2"
+            cy="48.2"
+            r="0.9"
+            fill="#ffffff"
+            opacity={isTalismanPricked ? "0.95" : "0.85"}
+          />
+          <circle
+            cx="51.8"
+            cy="51.8"
+            r="0.5"
+            fill="#ffffff"
+            opacity={isTalismanPricked ? "0.7" : "0.45"}
+          />
+        </g>
+      </g>
+
+      {/* Socket Bevel Rim */}
+      <circle
+        cx="50"
+        cy="50"
+        r="8.5"
+        fill="none"
+        stroke={isTalismanPricked ? "#ef4444" : "#38251b"}
+        strokeWidth="0.9"
+        className="transition-colors duration-200 group-hover:stroke-[#ef4444]"
+        style={{
+          filter: isTalismanPricked
+            ? 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.9))'
+            : undefined,
+        }}
+      />
+    </g>
+  );
 };
 
 export default function App() {
@@ -1780,6 +1931,7 @@ export default function App() {
 
   const [phase, setPhase] = useState<GamePhase>('DRAW');
   const [turnNumber, setTurnNumber] = useState<number>(1);
+  const [isAmpouleCracked, setIsAmpouleCracked] = useState<boolean>(false);
   const [blood, setBlood] = useState<number>(0);
   const [bones, setBones] = useState<number>(0);
   const [hand, setHand] = useState<CardDef[]>([]);
@@ -2056,7 +2208,7 @@ export default function App() {
     });
   }, []);
 
-  const triggerSfx = useCallback((type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory') => {
+  const triggerSfx = useCallback((type: 'draw' | 'sacrifice' | 'play' | 'hit' | 'bell' | 'bone' | 'defeat' | 'victory' | 'armor') => {
     if (audioEnabled) playSound(type);
   }, [audioEnabled]);
 
@@ -2065,10 +2217,17 @@ export default function App() {
     if (prevScaleRef.current !== scale) {
       prevScaleRef.current = scale;
       setScaleRumble(true);
-      const timer = setTimeout(() => setScaleRumble(false), 400);
+      const timer = setTimeout(() => setScaleRumble(false), 200);
       return () => clearTimeout(timer);
     }
   }, [scale]);
+
+  // Arterial Shunt safety observer: fractures ampoule if pressure hits +4 on turn 1
+  useEffect(() => {
+    if (turnNumber === 1 && scale >= 4) {
+      setIsAmpouleCracked(true);
+    }
+  }, [turnNumber, scale]);
 
   // Sync ChiptuneAudio BGM with screen state and mute status
   useEffect(() => {
@@ -2162,6 +2321,7 @@ export default function App() {
     setActiveTotem({ head: null, body: null });
     setTotemPieces([]);
     setTurnNumber(1);
+    setIsAmpouleCracked(false);
     setShowPauseMenu(false);
     setModalAlert(null);
     setBossState({
@@ -3135,6 +3295,7 @@ export default function App() {
           if (eCard.sigils.includes('Armored') && !eCard.shieldBroken) {
             await triggerSigilJitter(false, tLane);
             eCard.shieldBroken = true;
+            triggerSfx('armor');
             addLog(`Enemy ${eCard.name}'s armor absorbed the attack!`);
             setEnemyBoard([...currEBoard]);
           } else {
@@ -3234,7 +3395,7 @@ export default function App() {
                     await triggerSigilJitter(false, tLane);
                     backRowCard.shieldBroken = true;
                     setDamagedQueueLane(tLane);
-                    triggerSfx('hit');
+                    triggerSfx('armor');
                     await sleep(150);
                     setDamagedQueueLane(null);
                     addLog(`Excess damage (${excess}) struck enemy ${backRowCard.name} in the back row, but its Armor absorbed the blow!`);
@@ -3284,6 +3445,7 @@ export default function App() {
             // Excess volume diverts directly through the petcock into the banked ounce reservoir.
             if (turnNumber === 1 && currentScale >= 4) {
               ventedThisStrike += 1;
+              setIsAmpouleCracked(true);
               setTotalOverkillDamage(prev => (prev || 0) + 1);
               triggerSfx('hit');
               await sleep(60);
@@ -3787,6 +3949,7 @@ export default function App() {
           if (pCard.sigils.includes('Armored') && !pCard.shieldBroken) {
             await triggerSigilJitter(true, tLane);
             pCard.shieldBroken = true;
+            triggerSfx('armor');
             addLog(`Your ${pCard.name}'s armor absorbed the attack!`);
             setPlayerBoard([...currPBoard]);
           } else {
@@ -4833,6 +4996,7 @@ export default function App() {
     addLog("Turn 1 begins: Your opening hand is dealt. Play creatures or make sacrifices.");
 
     setTurnNumber(1);
+    setIsAmpouleCracked(false);
     setScreen('DUEL');
   };
 
@@ -6161,30 +6325,54 @@ export default function App() {
                   ? 'w-[24px] h-[24px]'
                   : 'w-[26px] h-[26px]';
 
-              return (
-                <div
-                  key={`sigil-${s}-${idx}`}
-                  title={`${s}: ${SIGIL_DESCRIPTIONS[s] || ''}`}
-                  className={`${medallionSizeClass} shrink-0 rounded-full bg-[#1c1815] border border-[#3d271d] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)] flex items-center justify-center overflow-hidden pointer-events-auto cursor-help transition-transform duration-150 ease-out hover:scale-135 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]`}
-                >
-                  <img
-                    src={getSigilArtUrl(s)}
-                    alt={s}
-                    className="w-full h-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                    onError={(e) => {
-                      const target = e.target as HTMLElement;
-                      target.style.display = 'none';
-                      if (target.parentElement) {
-                        const fallback = document.createElement('span');
-                        fallback.className = `${displaySigils.length >= 4 ? 'text-[8px]' : displaySigils.length >= 3 ? 'text-[9px]' : 'text-[11px]'} leading-none`;
-                        fallback.innerText = SIGIL_MAPPING[s] || '•';
-                        target.parentElement.appendChild(fallback);
-                      }
-                    }}
-                  />
-                </div>
-              );
+              const isOnField = options?.laneIndex !== undefined && !options?.isQueue;
+                const isArmorSigil = s === 'Armored';
+                const isArmorBroken = isArmorSigil && Boolean(card.shieldBroken) && isOnField;
+                const isArmorActive = isArmorSigil && !card.shieldBroken && isOnField;
+
+                const armorTitle = isArmorActive
+                  ? "Armored (Active): Negates the next instance of damage taken."
+                  : isArmorBroken
+                  ? "Armored (Broken): Armor was shattered; absorbs no further damage."
+                  : `${s}: ${SIGIL_DESCRIPTIONS[s] || ''}`;
+
+                const medallionBorderClass = isArmorActive
+                  ? 'border-amber-400/90 bg-[#2b1d11] shadow-[0_0_8px_rgba(251,191,36,0.65),inset_0_1px_2px_rgba(255,255,255,0.25)]'
+                  : isArmorBroken
+                  ? 'border-stone-800 bg-[#120e0c] opacity-35 grayscale shadow-none'
+                  : 'bg-[#1c1815] border-[#3d271d] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]';
+
+                return (
+                  <div
+                    key={`sigil-${s}-${idx}`}
+                    title={armorTitle}
+                    className={`${medallionSizeClass} relative shrink-0 rounded-full border flex items-center justify-center overflow-hidden pointer-events-auto cursor-help transition-all duration-150 ease-out hover:scale-135 hover:z-40 origin-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] ${medallionBorderClass}`}
+                  >
+                    <img
+                      src={getSigilArtUrl(s)}
+                      alt={s}
+                      className="w-full h-full object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                      onError={(e) => {
+                        const target = e.target as HTMLElement;
+                        target.style.display = 'none';
+                        if (target.parentElement) {
+                          const fallback = document.createElement('span');
+                          fallback.className = `${displaySigils.length >= 4 ? 'text-[8px]' : displaySigils.length >= 3 ? 'text-[9px]' : 'text-[11px]'} leading-none`;
+                          fallback.innerText = SIGIL_MAPPING[s] || '•';
+                          target.parentElement.appendChild(fallback);
+                        }
+                      }}
+                    />
+                    {isArmorBroken && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                        <span className="text-[12px] font-black text-red-600/90 leading-none drop-shadow-[0_1px_1px_#000]">
+                          ✕
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
             })}
           </div>
 
@@ -6206,8 +6394,14 @@ export default function App() {
             </span>
           </div>
 
-          {/* Health (Right Medallion) */}
-          <div className="absolute bottom-[3.5%] right-[4.5%] w-[23%] h-[16%] flex items-center justify-center pointer-events-none z-20">
+          {/* Health (Right Medallion) - wrapped in a protective gold ring only while Armor is active on the field */}
+            <div
+              className={`absolute bottom-[3.5%] right-[4.5%] w-[23%] h-[16%] rounded-full flex items-center justify-center pointer-events-none z-20 transition-all duration-200 ${
+                options?.laneIndex !== undefined && !options?.isQueue && card.sigils?.includes('Armored') && !card.shieldBroken
+                  ? 'ring-2 ring-amber-400/80 shadow-[0_0_8px_rgba(251,191,36,0.55)]'
+                  : ''
+              }`}
+            >
             <span
               className={`font-['Cinzel',_serif] font-black text-sm leading-none pointer-events-none ${
                 hasShadow
@@ -6486,15 +6680,15 @@ export default function App() {
                 }} 
                 className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[7.5px] whitespace-pre leading-none select-none drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]"
               >
-{`        ▀█████████▄     ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█      ███     ███    █▄     ▄████████  ▄█       
-         ███    ███   ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███  ▀█████████▄ ███    ███   ███    ███ ███       
-         ███    ███   ███    █▀    ███    █▀  ███▌ ███   ███        ███    ███ ███▌    ▀███▀▀██ ███    ███   ███    ███ ███       
-        ▄███▄▄▄██▀   ▄███▄▄▄      ▄███        ███▌ ███   ███       ▄███▄▄▄▄██▀ ███▌     ███   ▀ ███    ███   ███    ███ ███       
-       ▀▀███▀▀▀██▄  ▀▀███▀▀▀     ▀▀███ ████▄  ███▌ ███   ███      ▀▀███▀▀▀▀▀   ███▌     ███     ███    ███ ▀███████████ ███       
-         ███    ██▄   ███    █▄    ███    ███ ███  ███   ███      ▀███████████ ███      ███     ███    ███   ███    ███ ███       
-         ███    ███   ███    ███   ███    ███ ███  ███   ███        ███    ███ ███      ███     ███    ███   ███    ███ ███▌    ▄ 
-       ▄█████████▀    ██████████   ████████▀  █▀    ▀█   █▀         ███    ███ █▀      ▄████▀   ████████▀    ███    █▀  █████▄▄██ 
-                                                                   ███    ███                                             ▀     `}
+{`          ▀█████████▄   ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█     ███     ███    █▄     ▄████████  ▄█       
+           ███    ███  ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███ ▀█████████▄ ███    ███   ███    ███ ███       
+           ███    ███  ███    █▀    ███    █▀  ███▌ ███   ███        ███    ███ ███▌   ▀███▀▀██ ███    ███   ███    ███ ███       
+          ▄███▄▄▄██▀  ▄███▄▄▄      ▄███        ███▌ ███   ███       ▄███▄▄▄▄██▀ ███▌    ███   ▀ ███    ███   ███    ███ ███       
+         ▀▀███▀▀▀██▄ ▀▀███▀▀▀     ▀▀███ ████▄  ███▌ ███   ███      ▀▀███▀▀▀▀▀   ███▌    ███     ███    ███ ▀███████████ ███       
+           ███    ██▄  ███    █▄    ███    ███ ███  ███   ███      ▀███████████ ███     ███     ███    ███   ███    ███ ███       
+           ███    ███  ███    ███   ███    ███ ███  ███   ███        ███    ███ ███     ███     ███    ███   ███    ███ ███▌    ▄ 
+         ▄█████████▀   ██████████   ████████▀  █▀    ▀█   █▀         ███    ███ █▀     ▄████▀   ████████▀    ███    █▀  █████▄▄██ 
+                                                                     ███    ███                                             ▀     `}
     </pre>
   </button>
           </div>
@@ -8719,84 +8913,119 @@ export default function App() {
                   {/* Diegetic Blood-Prick Talisman (Enlarged Plinth) */}
                   <div className="flex flex-col items-center mt-1 -translate-x-6 sm:-translate-x-8 group select-none">
                       <button
-                        onClick={handleTalismanPrick}
-                        disabled={phase !== 'PLAY' || isTalismanPricked}
-                        title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
-                        className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-gradient-to-b from-[#1b1512] to-[#0d0a09] border-2 flex items-center justify-center select-none outline-none transition-all duration-150 ${
-                          isTalismanPricked
-                            ? 'translate-y-1 scale-[0.98] border-[#991b1b] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(185,28,28,0.75)] cursor-default'
-                            : phase === 'PLAY'
-                              ? 'border-[#3d3128] shadow-[0_4px_0_#080605,0_10px_20px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#b91c1c] hover:shadow-[0_4px_0_#080605,0_12px_24px_rgba(185,28,28,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer active:translate-y-1 active:scale-[0.98] active:shadow-[0_1px_0_#080605,0_2px_6px_rgba(0,0,0,0.95),inset_0_4px_10px_rgba(0,0,0,0.95)]'
-                              : 'border-[#221a15] opacity-60 shadow-[0_3px_0_#080605,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
-                        }`}
-                      >
-                        {/* Outer Inset Groove */}
-                        <div className="absolute inset-2 sm:inset-2.5 rounded-full border border-black/80 shadow-[inset_0_1px_3px_rgba(0,0,0,0.9)] pointer-events-none" />
-                        
-                        {/* Inner Dashed Ring */}
-                        <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-colors duration-200 pointer-events-none ${
-                          isTalismanPricked
-                            ? 'border-red-900/60'
-                            : 'border-[#2e231c] group-hover:border-[#7f1d1d]/80'
-                        }`} />
-
-                        <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] sm:w-[104px] sm:h-[104px] overflow-visible pointer-events-none transition-transform duration-150">
-                          {/* Plinth Outer Bevel */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="44"
-                            fill="none"
-                            stroke={isTalismanPricked ? "#7f1d1d" : "#241b16"}
-                            strokeWidth="2.5"
-                            className="transition-colors duration-200"
-                          />
-                          
-                          {/* Ritual Ring */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="38"
-                            fill="none"
-                            stroke={isTalismanPricked ? "#b91c1c" : "#1c1511"}
-                            strokeWidth="2"
-                            strokeDasharray="4 2"
-                            className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
+                          onClick={handleTalismanPrick}
+                          disabled={phase !== 'PLAY' || isTalismanPricked}
+                          title={phase === 'PLAY' ? "Prick your finger upon the iron dish to seal your assault" : "Awaiting your turn..."}
+                          className={`relative w-[125px] h-[125px] sm:w-[140px] sm:h-[140px] rounded-full bg-gradient-to-b from-[#1b1512] to-[#0d0a09] border-2 flex items-center justify-center select-none outline-none transition-all duration-200 ${
+                            isTalismanPricked
+                              ? 'translate-y-1 scale-[0.98] border-[#ef4444] shadow-[0_1px_0_#070504,inset_0_5px_14px_rgba(0,0,0,0.98),0_0_28px_rgba(239,68,68,0.85)] cursor-default'
+                              : phase === 'PLAY'
+                                ? 'border-[#3d3128] shadow-[0_4px_0_#080605,0_10px_20px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.08)] hover:border-[#ef4444] hover:shadow-[0_0_24px_rgba(239,68,68,0.55),0_0_44px_rgba(185,28,28,0.3),inset_0_0_16px_rgba(185,28,28,0.35)] cursor-pointer active:translate-y-1 active:scale-[0.98]'
+                                : 'border-[#221a15] opacity-60 shadow-[0_3px_0_#080605,0_6px_12px_rgba(0,0,0,0.7)] cursor-not-allowed'
+                          }`}
+                        >
+                          {/* Inner Radial Bloodlight Atmosphere (Hover & Pricked) */}
+                          <div
+                            className={`absolute inset-0 rounded-full transition-opacity duration-300 pointer-events-none ${
+                              isTalismanPricked
+                                ? 'opacity-100 bg-[radial-gradient(circle,rgba(220,38,38,0.35)_0%,rgba(153,27,27,0.15)_55%,transparent_75%)]'
+                                : 'opacity-0 group-hover:opacity-100 bg-[radial-gradient(circle,rgba(220,38,38,0.25)_0%,rgba(153,27,27,0.1)_50%,transparent_75%)]'
+                            }`}
                           />
 
-                          {/* Pentagram Star */}
-                          <path
-                            d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
-                            fill={isTalismanPricked ? "#991b1b" : "transparent"}
-                            stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#d6c2a5" : "#44362b"}
-                            className="transition-all duration-200 group-hover:stroke-[#ef4444]"
-                            strokeWidth={isTalismanPricked ? "4.5" : "3.5"}
-                            strokeLinejoin="round"
-                            strokeLinecap="round"
-                            style={{
-                              filter: isTalismanPricked
-                                ? 'drop-shadow(0 0 12px rgba(239,68,68,0.95))'
-                                : undefined,
-                            }}
-                          />
+                          {/* Outer Inset Groove */}
+                          <div className="absolute inset-2 sm:inset-2.5 rounded-full border border-black/80 shadow-[inset_0_1px_3px_rgba(0,0,0,0.9)] pointer-events-none" />
 
-                          {/* Center Prick Needle & Well */}
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r={isTalismanPricked ? "8" : "5"}
-                            fill={isTalismanPricked ? "#ef4444" : "#16100d"}
-                            stroke={isTalismanPricked ? "#7f1d1d" : "#38291f"}
-                            strokeWidth="1.5"
-                            className="transition-all duration-200 group-hover:fill-[#7f1d1d] group-hover:stroke-[#b91c1c]"
-                            style={{
-                              filter: isTalismanPricked
-                                ? 'drop-shadow(0 0 10px rgba(239,68,68,1))'
-                                : undefined,
-                            }}
-                          />
-                        </svg>
-                      </button>
+                          {/* Outermost Band: Full-Bleed Perimeter Zalgo Inscription Loop */}
+                          <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                            <defs>
+                              <path
+                                id="talismanOuterZalgoPath"
+                                d="M 50, 4.5 a 45.5,45.5 0 1,1 0,91 a 45.5,45.5 0 1,1 0,-91"
+                              />
+                            </defs>
+                            <text
+                              className={`font-mono text-[3.8px] font-bold select-none tracking-[0.03em] transition-all duration-200 ${
+                                isTalismanPricked
+                                  ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.7)]'
+                                  : 'fill-[#362217] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                              }`}
+                            >
+                              <textPath
+                                href="#talismanOuterZalgoPath"
+                                startOffset="0%"
+                                textLength="285.9"
+                                lengthAdjust="spacing"
+                              >
+                                S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • E̸̷X̴̵̷C̴̵̷I̸̷D̴̵̷I̸̷U̴̵̷M̸̷ • ᚛ᚨ̴̵̷ᛚ̴̵̷ᛏ̴̵̷ᚨ̴̵̷ᚱ̴̵̷᚜ • O̸̷B̸̷L̴̵̷A̴̵̷T̸̷I̸̷O̴̵̷ • M̸̷O̴̵̷R̸̷T̴̵̷A̸̷L̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • E̸̷X̴̵̷C̴̵̷I̸̷D̴̵̷I̸̷U̴̵̷M̸̷ • ᚛ᚨ̴̵̷ᛚ̴̵̷ᛏ̴̵̷ᚨ̴̵̷ᚱ̴̵̷᚜ • O̸̷B̸̷L̴̵̷A̴̵̷T̸̷I̸̷O̴̵̷ • M̸̷O̴̵̷R̸̷T̴̵̷A̸̷L̸̷I̸̷S̴̵̷ •
+                              </textPath>
+                            </text>
+                          </svg>
+
+                          {/* Mid Dashed Ring */}
+                          <div className={`absolute inset-3 sm:inset-3.5 rounded-full border border-dashed transition-all duration-200 pointer-events-none ${
+                            isTalismanPricked
+                              ? 'border-red-900/60 shadow-[0_0_8px_rgba(185,28,28,0.25)]'
+                              : 'border-[#2e231c] group-hover:border-[#b91c1c]/90 group-hover:shadow-[0_0_6px_rgba(185,28,28,0.4)]'
+                          }`} />
+
+                          {/* Inner Core SVG */}
+                          <svg viewBox="0 0 100 100" className="w-[84px] h-[84px] sm:w-[104px] sm:h-[104px] overflow-visible pointer-events-none transition-transform duration-150">
+                            <defs>
+                              <path
+                                id="talismanInnerZalgoPath"
+                                d="M 50, 12.5 a 37.5,37.5 0 1,1 0,75 a 37.5,37.5 0 1,1 0,-75"
+                              />
+                            </defs>
+
+                            {/* Plinth Inner Bevel */}
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="44"
+                              fill="none"
+                              stroke={isTalismanPricked ? "#7f1d1d" : "#241b16"}
+                              strokeWidth="2.5"
+                              className="transition-colors duration-200 group-hover:stroke-[#7f1d1d]"
+                            />
+
+                            {/* Inner Ring: 360-Degree Zalgo Inscription Loop */}
+                            <text
+                              className={`font-mono text-[4.1px] font-bold select-none tracking-[0.04em] transition-all duration-200 ${
+                                isTalismanPricked
+                                  ? 'fill-[#ef4444] drop-shadow-[0_0_3px_rgba(239,68,68,0.75)]'
+                                  : 'fill-[#422e23] group-hover:fill-[#ef4444] group-hover:drop-shadow-[0_0_3px_rgba(239,68,68,0.6)]'
+                              }`}
+                            >
+                              <textPath
+                                href="#talismanInnerZalgoPath"
+                                startOffset="0%"
+                                textLength="235.6"
+                                lengthAdjust="spacing"
+                              >
+                                S̴̵̷A̸̷C̴̵̷R̴̵̷I̸̷F̴̵̷I̸̷C̴̵̷I̸̷U̴̵̷M̸̷ • M̴̵̷O̸̷R̴̵̷T̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • ᚛ᛟ̴̵̷ᛋ̴̵̷ᚱ̴̵̷ᛏ̴̵̷ᚦ̴̵̷᚜ • V̴̵̷O̸̷I̴̵̷D̸̷ • S̴̵̷A̸̷C̴̵̷R̴̵̷I̸̷F̴̵̷I̸̷C̴̵̷I̸̷U̴̵̷M̸̷ • M̴̵̷O̸̷R̴̵̷T̸̷I̸̷S̴̵̷ • S̴̵̷A̸̷N̴̵̷G̸̷U̴̵̷I̸̷S̴̵̷ • ᚛ᛟ̴̵̷ᛋ̴̵̷ᚱ̴̵̷ᛏ̴̵̷ᚦ̴̵̷᚜ • V̴̵̷O̸̷I̴̵̷D̸̷ •
+                              </textPath>
+                            </text>
+
+                            {/* Pentagram Star */}
+                            <path
+                              d="M 50 12 L 72.3 80.7 L 13.9 38.3 L 86.1 38.3 L 27.7 80.7 Z"
+                              fill={isTalismanPricked ? "#991b1b" : "transparent"}
+                              stroke={isTalismanPricked ? "#ef4444" : phase === 'PLAY' ? "#d6c2a5" : "#44362b"}
+                              className={`transition-all duration-200 group-hover:stroke-[#ef4444] ${
+                                isTalismanPricked
+                                  ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.95)]'
+                                  : 'group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.85)]'
+                              }`}
+                              strokeWidth={isTalismanPricked ? "4.5" : "3.5"}
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                            />
+
+                            {/* Centermost Pupil & Living Eyeball (Tracks Mouse) */}
+                            <TalismanEye isTalismanPricked={isTalismanPricked} />
+                          </svg>
+                        </button>
 
                       <pre
                         className={`font-mono text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 transition-all duration-200 text-center ${
@@ -9295,47 +9524,115 @@ export default function App() {
         <div className="w-5 h-1.5 bg-gradient-to-b from-[#3a281c] to-[#1d140e] border border-[#523927] rounded-t-xs shadow-sm z-20" />
 
         {/* Glass Cylinder Body */}
-        <div className="relative w-full flex-1 rounded-full bg-[#0a0505] border border-white/20 shadow-[inset_0_2px_8px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col justify-end">
-          {/* Glass Specular Glint (Continuous Curved Longitudinal Reflection) */}
-          <div className="absolute top-0 bottom-0 left-[2px] w-[1.5px] bg-gradient-to-b from-white/40 via-white/10 to-white/20 rounded-full z-20 pointer-events-none" />
-          <div className="absolute top-0 bottom-0 right-[2px] w-[1px] bg-white/10 rounded-full z-20 pointer-events-none" />
+          <div className="relative w-full flex-1 rounded-full bg-[#0a0505] border border-white/20 shadow-[inset_0_2px_8px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col justify-end">
+            {/* Inline Fluid Mechanics Keyframes */}
+            <style>{`
+              @keyframes bloodWaveScroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              @keyframes bloodBubbleAscendA {
+                0% { bottom: 2%; transform: translateX(0) scale(0.6); opacity: 0; }
+                15% { opacity: 0.85; }
+                50% { transform: translateX(1px) scale(0.9); }
+                85% { opacity: 0.7; transform: translateX(-0.5px) scale(1.05); }
+                100% { bottom: 92%; transform: translateX(0) scale(1.2); opacity: 0; }
+              }
+              @keyframes bloodBubbleAscendB {
+                0% { bottom: 4%; transform: translateX(0) scale(0.5); opacity: 0; }
+                20% { opacity: 0.75; }
+                60% { transform: translateX(-1px) scale(0.85); }
+                85% { opacity: 0.65; transform: translateX(0.5px) scale(1); }
+                100% { bottom: 94%; transform: translateX(0) scale(1.1); opacity: 0; }
+              }
+              @keyframes bloodBubbleAscendC {
+                0% { bottom: 1%; transform: translateX(0) scale(0.7); opacity: 0; }
+                25% { opacity: 0.9; }
+                45% { transform: translateX(-0.5px) scale(0.95); }
+                75% { opacity: 0.8; transform: translateX(1px) scale(1.1); }
+                100% { bottom: 90%; transform: translateX(0) scale(1.25); opacity: 0; }
+              }
+            `}</style>
 
-          {/* Organic Viscous Blood Column */}
-          {(() => {
-            const fillPercent = isOverkill || scale >= 5
-              ? 100
-              : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
+            {/* Glass Specular Glint (Continuous Curved Longitudinal Reflection) */}
+            <div className="absolute top-0 bottom-0 left-[2px] w-[1.5px] bg-gradient-to-b from-white/40 via-white/10 to-white/20 rounded-full z-20 pointer-events-none" />
+            <div className="absolute top-0 bottom-0 right-[2px] w-[1px] bg-white/10 rounded-full z-20 pointer-events-none" />
 
-            return (
-              <div
-                className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-                  scaleRumble || isOverkill
-                    ? 'animate-pulse filter brightness-110'
-                    : ''
-                }`}
-                style={{
-                  height: `${fillPercent}%`,
-                  background: 'linear-gradient(to top, #1c0205 0%, #43050c 18%, #6e0b15 42%, #991320 68%, #ba1929 88%, #dc2626 100%)',
-                  boxShadow: isOverkill || scale >= 5
-                    ? '0 0 20px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(254, 202, 202, 0.4)'
-                    : '0 0 10px rgba(185, 28, 28, 0.75), inset 0 0 4px rgba(254, 202, 202, 0.25)',
-                }}
-              >
-                {/* Surface Liquid Meniscus */}
-                <div className="absolute top-0 inset-x-0 h-[2.5px] rounded-t-full bg-gradient-to-r from-red-400 via-rose-100 to-red-400 shadow-[0_0_6px_rgba(254,202,202,0.9)] z-10" />
+            {/* Organic Viscous Blood Column */}
+            {(() => {
+              const fillPercent = isOverkill || scale >= 5
+                ? 100
+                : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
 
-                {/* Overkill Arterial Surge */}
-                {(isOverkill || scale >= 5) && (
-                  <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
-                )}
-              </div>
-            );
-          })()}
+              return (
+                <div
+                  className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+                    scaleRumble || isOverkill
+                      ? 'animate-pulse filter brightness-110'
+                      : ''
+                  }`}
+                  style={{
+                    height: `${fillPercent}%`,
+                    background: 'linear-gradient(to top, #1c0205 0%, #43050c 18%, #6e0b15 42%, #991320 68%, #ba1929 88%, #dc2626 100%)',
+                    boxShadow: isOverkill || scale >= 5
+                      ? '0 0 20px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(254, 202, 202, 0.4)'
+                      : '0 0 10px rgba(185, 28, 28, 0.75), inset 0 0 4px rgba(254, 202, 202, 0.25)',
+                  }}
+                >
+                  {/* Rising Arterial Micro-Bubbles */}
+                  {fillPercent > 8 && (
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div
+                        className="absolute left-[20%] w-[3px] h-[3px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.7)]"
+                        style={{ animation: 'bloodBubbleAscendA 3.2s ease-in infinite' }}
+                      />
+                      <div
+                        className="absolute left-[62%] w-[2px] h-[2px] rounded-full bg-rose-200/40 border border-white/50 shadow-[0_0_2px_rgba(255,255,255,0.5)]"
+                        style={{ animation: 'bloodBubbleAscendB 4.1s ease-in infinite 1.2s' }}
+                      />
+                      <div
+                        className="absolute left-[38%] w-[2.5px] h-[2.5px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.6)]"
+                        style={{ animation: 'bloodBubbleAscendC 2.7s ease-in infinite 0.6s' }}
+                      />
+                    </div>
+                  )}
 
-          {/* Turn 1 OTK Limit Glass Fracture on the Ampoule (At +4 Height, 10% from Top) */}
-          {turnNumber === 1 && (
-            scale >= 4 ? (
-              /* Broken Ampoule Glass at +4 Pressure */
+                  {/* Flowing Wavy Surface Meniscus */}
+                  {fillPercent > 0 && (
+                    <div className="absolute -top-[3.5px] left-0 right-0 h-[7px] overflow-hidden pointer-events-none z-10">
+                      <svg
+                        viewBox="0 0 64 8"
+                        className="w-[200%] h-full"
+                        style={{ animation: 'bloodWaveScroll 2.4s linear infinite' }}
+                        preserveAspectRatio="none"
+                      >
+                        <path
+                          d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4 L 64 8 L 0 8 Z"
+                          fill="#dc2626"
+                        />
+                        <path
+                          d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4"
+                          fill="none"
+                          stroke="#ffe4e6"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          className="filter drop-shadow-[0_0_3px_rgba(254,202,202,0.95)]"
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Overkill Arterial Surge */}
+                  {(isOverkill || scale >= 5) && (
+                    <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
+                  )}
+                </div>
+              );
+            })()}
+
+          {/* Arterial Limit Ampoule State: Pre-scored until breached, then fractured for the rest of the battle */}
+            {isAmpouleCracked ? (
+              /* Broken Ampoule Glass at +4 Pressure (Persists until duel ends) */
               <div
                 className="absolute top-[10%] -translate-y-1/2 -left-1 -right-1 h-8 pointer-events-none z-30 select-none overflow-visible"
                 title="Arterial Limit Breached: Ampoule shattered at +4 to vent lethal pressure"
@@ -9364,10 +9661,9 @@ export default function App() {
                 title="Hydraulic Limit (+4): Glass pre-scored to fracture under lethal first-turn pressure"
               >
                 <div className="w-full h-full border-t border-dashed border-red-400/40 shadow-[0_0_3px_rgba(239,68,68,0.3)]" />
-              </div>
-            )
-          )}
-        </div>
+                </div>
+              )}
+          </div>
 
         {/* Bottom Brass Ferrule Collar */}
         <div className="w-5 h-1.5 bg-gradient-to-b from-[#1d140e] to-[#3a281c] border border-[#523927] rounded-b-xs shadow-sm z-20" />

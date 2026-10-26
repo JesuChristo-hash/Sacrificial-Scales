@@ -20,7 +20,7 @@ cd dist
 git init -q
 git checkout -B gh-pages -q
 git add -A
-git commit -m "deploy: update live site" -q
+git commit -m "deploy: nightly update" -q
 git push -f https://github.com/JesuChristo-hash/Sacrificial-Scales.git gh-pages
 if %ERRORLEVEL% NEQ 0 (
     echo [!] Failed to push to gh-pages. Halting deployment.
