@@ -8401,15 +8401,6 @@ export default function App() {
             isGrizzlyShaking ? 'animate-grizzly-shake' : ''
           }`}
         >
-          {/* Dark, Weathered Cabin Floorboards: Vertical Plank Seams */}
-          <div className="absolute inset-0 pointer-events-none grid grid-cols-6 sm:grid-cols-8 z-0">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={`cabin-plank-${i}`}
-                className="h-full border-r border-[#211710]/80 bg-gradient-to-r from-transparent via-[#140e0b]/40 to-black/30"
-              />
-            ))}
-          </div>
 
           {/* Heavy Vignette Overlay */}
           <div
@@ -9002,15 +8993,15 @@ export default function App() {
                                return (
                                  <div
                                    key={`e-queue-slot-${idx}`}
-                                   className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                     card || isDropping ? 'z-20' : 'z-0'
-                                   } ${isDropping ? 'z-30' : 'z-10'}`}
-                                 >
-                                   {(!card || isDropping) && (
-                                     <span className="absolute text-xs font-mono font-bold text-amber-900/40 select-none pointer-events-none tracking-widest">
-                                       ↓
-                                     </span>
-                                   )}
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                      card || isDropping ? 'z-20' : 'z-0'
+                                    } ${isDropping ? 'z-30' : 'z-10'}`}
+                                  >
+                                    {(!card || isDropping) && (
+                                      <span className="absolute text-xs font-mono font-bold text-amber-900/40 select-none pointer-events-none tracking-widest">
+                                        ↓
+                                      </span>
+                                    )}
 
                                    {card && (
                                      <div
@@ -9050,15 +9041,15 @@ export default function App() {
                                return (
                                  <div
                                    key={`e-slot-${idx}`}
-                                   className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                     isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                                   }`}
-                                 >
-                                   {!card && (
-                                     <span className="absolute text-xs font-mono font-bold text-red-950/60 select-none pointer-events-none">
-                                       •
-                                     </span>
-                                   )}
+                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                      isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                    }`}
+                                  >
+                                    {(!card || isAttackingThisLane) && (
+                                      <span className="absolute text-[10px] font-mono text-amber-900/30 select-none pointer-events-none">
+                                        •
+                                      </span>
+                                    )}
                                    {card ? (
                                      <div
                                        className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
@@ -9108,16 +9099,16 @@ export default function App() {
                      return (
                        <div
                          key={`p-slot-${idx}`}
-                         onClick={() => handlePlayerSlotClick(idx)}
-                         className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer overflow-visible ${
-                           isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                         }`}
-                       >
-                         {!card && (
-                           <span className="absolute text-[11px] font-mono text-amber-900/40 select-none pointer-events-none tracking-widest">
-                             +
-                           </span>
-                         )}
+                                  onClick={() => handlePlayerSlotClick(idx)}
+                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 hover:border-[#cfb794]/50 bg-transparent hover:bg-white/[0.02] cursor-pointer overflow-visible ${
+                                    isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                  }`}
+                                >
+                                  {(!card || isAttackingThisLane) && (
+                                    <span className="absolute text-[11px] font-mono text-amber-900/40 select-none pointer-events-none tracking-widest">
+                                      +
+                                    </span>
+                                  )}
                          {card ? (
                            renderCard(card, {
                              laneIndex: idx,
