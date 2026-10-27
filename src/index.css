@@ -246,31 +246,24 @@
 /* Card Placement Slam: Tactile drop with impact compression and settling rebound */
 @keyframes card-slam {
   0% {
-    opacity: 0;
-    transform: translateY(-22px) scale(1.18);
-    filter: drop-shadow(0 24px 28px rgba(0, 0, 0, 0.95));
+    opacity: 0.85;
+    transform: translateY(-6px) scale(1.03);
+    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.75));
   }
-  45% {
+  60% {
     opacity: 1;
-    transform: translateY(-6px) scale(1.08);
-  }
-  72% {
-    transform: translateY(2px) scale(0.95);
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(180, 130, 80, 0.3));
-  }
-  88% {
-    transform: translateY(-1px) scale(1.02);
+    transform: translateY(1px) scale(0.995);
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85));
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.85));
   }
 }
 
 .animate-summon-wipe {
-  animation: card-slam 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
-  will-change: transform, filter, opacity;
+  animation: card-slam 0.18s cubic-bezier(0.2, 0.8, 0.25, 1) forwards !important;
+  will-change: transform, opacity;
   position: relative;
 }
 

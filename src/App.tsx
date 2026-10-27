@@ -1737,6 +1737,208 @@ const TalismanEye: React.FC<{ isTalismanPricked: boolean }> = ({ isTalismanPrick
   );
 };
 
+// --- Volumetric Occult Smoke Cloud Transition (Hardware Canvas Particles) ---
+const SMOKE_PUFFS = Array.from({ length: 84 }, (_, i) => {
+  let fromLeft: boolean;
+  let startX: number;
+  let targetX: number;
+
+  if (i < 28) {
+    // Sector 1: Left Flank anchors (ensures left-side cards stay densely veiled)
+    fromLeft = true;
+    startX = -220 - ((i * 13) % 180);
+    targetX = -40 + (i / 27) * 480 + ((i * 17) % 60 - 30);
+  } else if (i < 56) {
+    // Sector 2: Center Core billows (interlocking center meeting point)
+    const j = i - 28;
+    fromLeft = j % 2 === 0;
+    startX = fromLeft ? -220 - (j * 12) : 1280 + 220 + (j * 12);
+    targetX = 400 + (j / 27) * 480 + ((j * 19) % 60 - 30);
+  } else {
+    // Sector 3: Right Flank anchors (ensures right-side cards stay densely veiled)
+    const j = i - 56;
+    fromLeft = false;
+    startX = 1280 + 220 + ((j * 13) % 180);
+    targetX = 840 + (j / 27) * 480 + ((j * 17) % 60 - 30);
+  }
+
+  const baseY = 20 + ((i * 31) % 680);
+  const baseR = 150 + ((i * 23) % 110);
+  const spriteIdx = i % 4;
+  const maxAlpha = [0.98, 0.90, 0.78, 0.50][spriteIdx];
+  const driftY = -25 - ((i * 11) % 35);
+  const speedMult = 0.85 + ((i * 13) % 35) / 100;
+
+  return { fromLeft, startX, targetX, baseY, baseR, driftY, spriteIdx, maxAlpha, speedMult };
+});
+
+const createSmokeSprites = () => {
+  const tones = [
+    { r: 8, g: 6, b: 5, a: 0.98 },    // deep soot
+    { r: 18, g: 14, b: 12, a: 0.90 }, // charcoal
+    { r: 32, g: 26, b: 24, a: 0.78 }, // dark ash
+    { r: 48, g: 40, b: 36, a: 0.50 }, // wisp highlight
+  ];
+  return tones.map(({ r, g, b, a }) => {
+    const size = 256;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext('2d');
+    if (!ctx) return c;
+    const half = size / 2;
+    const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
+    grad.addColorStop(0.35, `rgba(${r}, ${g}, ${b}, ${a * 0.85})`);
+    grad.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${a * 0.4})`);
+    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    return c;
+  });
+};
+
+const SmokeTransitionOverlay: React.FC<{ phase: 'IDLE' | 'IN' | 'OUT' }> = ({ phase }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const spritesRef = useRef<HTMLCanvasElement[] | null>(null);
+
+  useEffect(() => {
+    if (phase === 'IDLE') return;
+
+    if (!spritesRef.current) {
+      spritesRef.current = createSmokeSprites();
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const sprites = spritesRef.current;
+    let animId: number;
+    const startTime = performance.now();
+    const duration = phase === 'IN' ? 550 : 600;
+
+    const render = (now: number) => {
+      const elapsed = now - startTime;
+      const rawProgress = Math.min(1, elapsed / duration);
+
+      ctx.clearRect(0, 0, 1280, 720);
+
+      if (phase === 'IN') {
+        const baseDark = Math.max(0, Math.min(1, (rawProgress - 0.35) / 0.65));
+
+        // Draw rolling volumetric smoke puffs across all sectors
+        for (const pt of SMOKE_PUFFS) {
+          const t = Math.min(1, rawProgress * pt.speedMult);
+          const tEased = 1 - Math.pow(1 - t, 3);
+          const cx = pt.startX + (pt.targetX - pt.startX) * tEased;
+          const cy = pt.baseY + pt.driftY * tEased;
+          const cr = pt.baseR * (0.7 + 0.45 * tEased);
+          const ca = Math.min(pt.maxAlpha, t * 1.4 * pt.maxAlpha);
+
+          if (ca <= 0.01) continue;
+          ctx.globalAlpha = ca;
+          const sprite = sprites[pt.spriteIdx];
+          ctx.drawImage(sprite, cx - cr, cy - cr, cr * 2, cr * 2);
+        }
+
+        // Deep soot base wash guarantees total blackout at peak
+        if (baseDark > 0) {
+          ctx.fillStyle = '#080605';
+          ctx.globalAlpha = baseDark;
+          ctx.fillRect(0, 0, 1280, 720);
+        }
+      } else if (phase === 'OUT') {
+        const p = rawProgress * rawProgress;
+        // Base dark fades in lockstep with the puffs rather than dying early
+        const baseDark = Math.max(0, 1 - rawProgress * 1.15);
+
+        if (baseDark > 0) {
+          ctx.fillStyle = '#080605';
+          ctx.globalAlpha = baseDark;
+          ctx.fillRect(0, 0, 1280, 720);
+        }
+
+        // All three sectors expand, lift upward, and evaporate in unison
+        for (const pt of SMOKE_PUFFS) {
+          const driftX = (pt.fromLeft ? -200 : 200) * p;
+          const cx = pt.targetX + driftX;
+          const cy = pt.baseY + pt.driftY - (p * 60);
+          const cr = pt.baseR * 1.15 * (1 + 0.35 * p);
+          const ca = Math.max(0, pt.maxAlpha * (1 - rawProgress));
+
+          if (ca <= 0.01) continue;
+          ctx.globalAlpha = ca;
+          const sprite = sprites[pt.spriteIdx];
+          ctx.drawImage(sprite, cx - cr, cy - cr, cr * 2, cr * 2);
+        }
+      }
+
+      ctx.globalAlpha = 1;
+
+      if (rawProgress < 1) {
+        animId = requestAnimationFrame(render);
+      }
+    };
+
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [phase]);
+
+  if (phase === 'IDLE') return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={1280}
+      height={720}
+      className="absolute inset-0 pointer-events-auto select-none overflow-hidden"
+      style={{ zIndex: 999 }}
+    />
+  );
+};
+const DISCORD_LOCK = {
+  salt: "cce1168b088e90691675f91b195bfab1",
+  iv: "c665a153f1cd6939973c66d5",
+  data: "2ca5dfac6d42da6d5dea6ad952b9e0b42a5bb4a31e128b766ee46e35fef657d2cbd4988663839372d713b34b533b91a6ec078b68e4c3d701"
+};
+
+async function unlockSecretUrl(passcode: string): Promise<string | null> {
+  try {
+    const fromHex = (hex: string) => new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const enc = new TextEncoder();
+    const salt = fromHex(DISCORD_LOCK.salt);
+    const iv = fromHex(DISCORD_LOCK.iv);
+    const data = fromHex(DISCORD_LOCK.data);
+
+    const keyMaterial = await window.crypto.subtle.importKey(
+      "raw",
+      enc.encode(passcode),
+      "PBKDF2",
+      false,
+      ["deriveKey"]
+    );
+
+    const key = await window.crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data
+    );
+
+    return new TextDecoder().decode(decrypted);
+  } catch {
+    return null;
+  }
+}
 export default function App() {
   // --- Game Flow & Navigation ---
   const [screen, setScreenRaw] = useState<ScreenState>('SPLASH');
@@ -1746,12 +1948,54 @@ export default function App() {
   const chiptuneAudio = ChiptuneAudio;
   const [previousScreen, setPreviousScreen] = useState<ScreenState>('DUEL');
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
+  // --- Cryptographic Discord Gate State ---
+  const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
+  const [discordInput, setDiscordInput] = useState('');
+  const [discordError, setDiscordError] = useState(false);
+  const [unlockedDiscordUrl, setUnlockedDiscordUrl] = useState<string | null>(() => {
+    return sessionStorage.getItem('sacrificial_discord_unlocked');
+  });
 
-  // Seamless Paper Roll & Menu Transition State
+  const [showDevTools, setShowDevTools] = useState(false);
+  const [devTapCount, setDevTapCount] = useState(0);
+  const devTapTimerRef = useRef<number | null>(null);
+
+  const handleSecretDevTap = () => {
+    if (devTapTimerRef.current) clearTimeout(devTapTimerRef.current);
+    const nextCount = devTapCount + 1;
+    if (nextCount >= 5) {
+      setShowDevTools(prev => !prev);
+      setDevTapCount(0);
+    } else {
+      setDevTapCount(nextCount);
+      devTapTimerRef.current = window.setTimeout(() => setDevTapCount(0), 2000);
+    }
+  };
+  const handleDiscordClick = (e: React.MouseEvent) => {
+    if (unlockedDiscordUrl) return;
+    e.preventDefault();
+    setShowDiscordPrompt(true);
+  };
+
+  const handleAttemptUnlock = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const url = await unlockSecretUrl(discordInput.trim());
+    if (url) {
+      setUnlockedDiscordUrl(url);
+      sessionStorage.setItem('sacrificial_discord_unlocked', url);
+      setShowDiscordPrompt(false);
+      setDiscordError(false);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      setDiscordError(true);
+      setDiscordInput('');
+    }
+  };
+
+  // Atmospheric Occult Black Smoke Transition State
   const screenStageRef = useRef<HTMLDivElement>(null);
   const prevScreenRef = useRef<ScreenState>('SPLASH');
-  const [isPaperSliding, setIsPaperSliding] = useState<boolean>(false);
-  const [outgoingSnapshot, setOutgoingSnapshot] = useState<{ html: string; className: string } | null>(null);
+  const [smokePhase, setSmokePhase] = useState<'IDLE' | 'IN' | 'OUT'>('IDLE');
   const [menuFadingOut, setMenuFadingOut] = useState<boolean>(false);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1785,26 +2029,33 @@ export default function App() {
     const isSplash = nextVal === 'SPLASH';
     const isMenuTransition = isMenuScreen(current) || isMenuScreen(nextVal);
 
-    // Suppress paper slide for battles, splash, and menus
-    if (!isConsecutiveDuel && !isSplash && !isMenuTransition && screenStageRef.current) {
-      setOutgoingSnapshot({
-        html: screenStageRef.current.innerHTML,
-        className: screenStageRef.current.className,
-      });
-      setIsPaperSliding(true);
-
+    // Suppress heavy transition for fast menus or splash screen
+    if (!isConsecutiveDuel && !isSplash && !isMenuTransition) {
       if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-      transitionTimerRef.current = setTimeout(() => {
-        setIsPaperSliding(false);
-        setOutgoingSnapshot(null);
-      }, 900);
-    } else {
-      setIsPaperSliding(false);
-      setOutgoingSnapshot(null);
-    }
 
-    prevScreenRef.current = nextVal;
-    setScreenRaw(nextVal);
+      // Phase 1 (550ms): Soft volumetric smoke clouds roll inward from flanks
+      setSmokePhase('IN');
+
+      transitionTimerRef.current = setTimeout(() => {
+        // Phase 2: Mount new screen safely behind pitch-black smoke blanket
+        prevScreenRef.current = nextVal;
+        setScreenRaw(nextVal);
+
+        // Phase 3 (180ms hold): Allows card art and textures to paint completely
+        transitionTimerRef.current = setTimeout(() => {
+          setSmokePhase('OUT');
+
+          // Phase 4 (600ms): Smoke lifts and dissipates away
+          transitionTimerRef.current = setTimeout(() => {
+            setSmokePhase('IDLE');
+          }, 600);
+        }, 180);
+      }, 550);
+    } else {
+      setSmokePhase('IDLE');
+      prevScreenRef.current = nextVal;
+      setScreenRaw(nextVal);
+    }
   }, []);
 
   // --- Campaign / Run State ---
@@ -2978,100 +3229,114 @@ export default function App() {
       if (!hasSprint && !hasRampager && !hasHefty) continue;
 
       movedSet.add(card.id);
-      const dir = card.sprintDir ?? 1;
-      const target = i + dir;
+      let dir = card.sprintDir ?? 1;
+        let target = i + dir;
 
-      // 1. SPRINTER: Moves into open space; turns around without moving if blocked
-      if (hasSprint && !hasHefty && !hasRampager) {
-        const canMove = target >= 0 && target <= 3 && nextBoard[target] === null;
+        // 1. SPRINTER: Moves into open space; bounces immediately off board edges
+        if (hasSprint && !hasHefty && !hasRampager) {
+          if (target < 0 || target > 3) {
+            dir = -dir;
+            target = i + dir;
+          }
 
-        if (canMove) {
-          await triggerLateralMove(card.id, target - i);
-          nextBoard[target] = card;
-          if (card.name === "Demon Elk") {
-            nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
+          const canMove = target >= 0 && target <= 3 && nextBoard[target] === null;
+
+          if (canMove) {
+            await triggerLateralMove(card.id, target - i);
+            nextBoard[target] = card;
+            if (card.name === "Demon Elk") {
+              nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
+            } else {
+              nextBoard[i] = null;
+            }
+            card.sprintDir = dir;
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} stepped into lane ${target + 1}.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
+            await new Promise(res => setTimeout(res, 100));
           } else {
-            nextBoard[i] = null;
-          }
-          card.sprintDir = dir;
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} stepped into lane ${target + 1}.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
-          await new Promise(res => setTimeout(res, 100));
-        } else {
-          // Blocked by board edge or creature: DO NOT MOVE. Only reverse facing.
-          card.sprintDir = -dir;
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} was blocked and turned around.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
-        }
-      }
-
-      // 2. RAMPAGER: Displaces target card; turns around if hitting board edge
-      else if (hasRampager) {
-        const canMove = target >= 0 && target <= 3;
-
-        if (canMove) {
-          const swapped = nextBoard[target];
-          await Promise.all([
-            triggerLateralMove(card.id, target - i),
-            swapped?.id ? triggerLateralMove(swapped.id, i - target) : Promise.resolve(),
-          ]);
-          nextBoard[target] = card;
-          nextBoard[i] = swapped;
-          card.sprintDir = dir;
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} rampaged, displacing ${swapped?.name || 'empty space'}.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
-          await new Promise(res => setTimeout(res, 100));
-        } else {
-          card.sprintDir = -dir;
-          addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} hit the edge and turned around.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
-        }
-      }
-
-      // 3. HEFTY: Shoves line toward nearest empty slot; turns around if jammed
-      else if (hasHefty) {
-        let emptySlot = -1;
-        for (let j = target; j >= 0 && j <= 3; j += dir) {
-          if (nextBoard[j] === null) {
-            emptySlot = j;
-            break;
+            card.sprintDir = -dir;
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} was blocked and turned around.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
           }
         }
 
-        if (emptySlot !== -1) {
-          const shiftPromises: Promise<void>[] = [];
-          for (let j = emptySlot; j !== i; j -= dir) {
-            const shiftCard = nextBoard[j - dir];
-            if (shiftCard?.id) {
-              shiftPromises.push(triggerLateralMove(shiftCard.id, dir));
+        // 2. RAMPAGER: Displaces target card; bounces immediately off board edges
+        else if (hasRampager) {
+          if (target < 0 || target > 3) {
+            dir = -dir;
+            target = i + dir;
+          }
+
+          const canMove = target >= 0 && target <= 3;
+
+          if (canMove) {
+            const swapped = nextBoard[target];
+            await Promise.all([
+              triggerLateralMove(card.id, target - i),
+              swapped?.id ? triggerLateralMove(swapped.id, i - target) : Promise.resolve(),
+            ]);
+            nextBoard[target] = card;
+            nextBoard[i] = swapped;
+            card.sprintDir = dir;
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} rampaged, displacing ${swapped?.name || 'empty space'}.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
+            await new Promise(res => setTimeout(res, 100));
+          } else {
+            card.sprintDir = -dir;
+            addLog(`${isPlayer ? 'Your' : 'Enemy'} ${card.name} hit the edge and turned around.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
+          }
+        }
+
+        // 3. HEFTY: Shoves line toward nearest empty slot; bounces immediately off board edges
+        else if (hasHefty) {
+          if (target < 0 || target > 3) {
+            dir = -dir;
+            target = i + dir;
+          }
+
+          let emptySlot = -1;
+          for (let j = target; j >= 0 && j <= 3; j += dir) {
+            if (nextBoard[j] === null) {
+              emptySlot = j;
+              break;
             }
           }
-          await Promise.all(shiftPromises);
-          for (let j = emptySlot; j !== i; j -= dir) {
-            nextBoard[j] = nextBoard[j - dir];
-          }
-          nextBoard[target] = card;
-          if (card.name === "Demon Elk") {
-            nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
+
+          if (emptySlot !== -1) {
+            const shiftPromises: Promise<void>[] = [];
+            for (let j = emptySlot; j !== i; j -= dir) {
+              const shiftCard = nextBoard[j - dir];
+              if (shiftCard?.id) {
+                shiftPromises.push(triggerLateralMove(shiftCard.id, dir));
+              }
+            }
+            await Promise.all(shiftPromises);
+            for (let j = emptySlot; j !== i; j -= dir) {
+              nextBoard[j] = nextBoard[j - dir];
+            }
+            nextBoard[target] = card;
+            if (card.name === "Demon Elk") {
+              nextBoard[i] = isPlayer ? applyPlayerTotem(cloneCard(TOKEN_VERTIBRAE), activeTotem) : cloneCard(TOKEN_VERTIBRAE);
+            } else {
+              nextBoard[i] = null;
+            }
+            card.sprintDir = dir;
+            addLog(`${card.name} shoved the line toward lane ${emptySlot + 1}.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
+            await new Promise(res => setTimeout(res, 100));
           } else {
-            nextBoard[i] = null;
+            card.sprintDir = -dir;
+            addLog(`${card.name} could not shove and turned around.`);
+            if (isPlayer) setPlayerBoard([...nextBoard]);
+            else setEnemyBoard([...nextBoard]);
           }
-          card.sprintDir = dir;
-          addLog(`${card.name} shoved the line toward lane ${emptySlot + 1}.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
-          await new Promise(res => setTimeout(res, 100));
-        } else {
-          card.sprintDir = -dir;
-          addLog(`${card.name} could not shove and turned around.`);
-          if (isPlayer) setPlayerBoard([...nextBoard]);
-          else setEnemyBoard([...nextBoard]);
         }
-      }
     }
 
     return nextBoard;
@@ -3376,6 +3641,18 @@ export default function App() {
               if (pCard.health > 0 && pCard.sigils.includes('Bloodlust')) {
                 await triggerSigilJitter(true, lane);
                 pCard.attack = (pCard.attack || 0) + 1;
+
+                // Hodag's Bloodlust permanently commits its attack growth to masterDeck
+                if (pCard.name === 'Hodag') {
+                  setMasterDeck(prev =>
+                    prev.map(c =>
+                      c.id === pCard.id || c.name === 'Hodag'
+                        ? { ...c, attack: (c.attack || 0) + 1 }
+                        : c
+                    )
+                  );
+                }
+
                 setPlayerBoard([...currPBoard]);
                 addLog(`${pCard.name}'s Bloodlust surged (+1 ATK)!`);
               }
@@ -4046,17 +4323,21 @@ export default function App() {
                 handAdditions.push(applyPlayerTotem(restoredDef, activeTotem));
               }
 
-              const ceIdx = hand.findIndex(c => c.sigils.includes('Corpse Eater'));
-              if (ceIdx !== -1) {
-                const ceCard = hand[ceIdx];
-                setHand(h => h.filter((_, idx) => idx !== ceIdx));
-                triggerSummonWipe(ceCard.id);
-                currPBoard[tLane] = ceCard;
-                addLog(`Corpse Eater triggered! ${ceCard.name} leaped into the fray!`);
-              } else {
-                currPBoard[tLane] = null;
-              }
-              setPlayerBoard([...currPBoard]);
+              // Only pull a Corpse Eater from hand if that specific card instance hasn't already leaped onto the board this turn
+                const ceIdx = hand.findIndex(
+                  c => c.sigils.includes('Corpse Eater') && !currPBoard.some(b => b?.id === c.id)
+                );
+                if (ceIdx !== -1) {
+                  const ceCard = hand[ceIdx];
+                  // Filter by unique card ID so previously used instances are removed from hand state
+                  setHand(h => h.filter(c => c.id !== ceCard.id));
+                  triggerSummonWipe(ceCard.id);
+                  currPBoard[tLane] = ceCard;
+                  addLog(`Corpse Eater triggered! ${ceCard.name} leaped into the fray!`);
+                } else {
+                  currPBoard[tLane] = null;
+                }
+                setPlayerBoard([...currPBoard]);
             }
           }
         } else {
@@ -4919,55 +5200,30 @@ export default function App() {
       }
 
       enemyCardsPlayedRef.current = playedCount;
-      setEnemyCardsPlayed(playedCount);
-      setEnemyWavesLeft(2);
-      addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
-    }
-
-    // --- Anti-OTK Safeguards & Grizzly Wall ---
-    if (consecutiveOneTurnWins >= 3) {
-      if (isBoss) {
-        setPendingBossGrizzlyWall(true);
-        addLog("Anti-OTK: Boss detected. Grizzly Wall held until Phase 2...");
-      } else {
-        setGrizzlyWallActiveInDuel(true);
-        setIsGrizzlyShaking(true);
-        setTimeout(() => setIsGrizzlyShaking(false), 1200);
-
-        for (let i = 0; i < 4; i++) {
-          initBoard[i] = {
-            ...cloneCard(CARD_GRIZZLY),
-            id: `grizzly-wall-front-${Date.now()}-${i}`
-          };
-          initQueue[i] = {
-            ...cloneCard(CARD_GRIZZLY),
-            id: `grizzly-wall-back-${Date.now()}-${i}`
-          };
-        }
-        addLog("TOO FAST. TOO SOON. An insurmountable wall of Grizzlies floods the board!");
+        setEnemyCardsPlayed(playedCount);
+        setEnemyWavesLeft(2);
+        addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
       }
-    } else if (!isBoss && consecutiveOneTurnWins === 2) {
-      const shuffledLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-      const playerLanes = shuffledLanes.slice(0, 2);
-      } else if (!isBoss) {
-      // Natural Encounter Architecture: Woods and wetlands generate native obstacles
-      // Duels 1-2 remain clear; Encounter 3+ has a 45% chance to feature a terrain blocker
-      const hasTerrain = encounter >= 3 && Math.random() < 0.45;
-      if (hasTerrain) {
-        const terrainLane = Math.floor(Math.random() * 4);
-        // Only place terrain in an empty lane to avoid overwriting queued spawns
-        if (initBoard[terrainLane] === null) {
-          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
-          initBoard[terrainLane] = {
-            ...cloneCard(terrainCard),
-            id: `terrain-${Date.now()}-${terrainLane}`
-          };
-          addLog(`The trail is obstructed: a ${terrainCard.name} stands in lane ${terrainLane + 1}.`);
+
+      // Natural Encounter Architecture: Stage 1+ encounters feature native obstacles
+      // Duels 1-2 remain clear; Duel 3+ has a 50% chance to feature a terrain blocker
+      if (!isBoss) {
+        const duelCount = typeof duelsCompleted !== 'undefined' ? duelsCompleted : level;
+        const hasTerrain = duelCount >= 2 && Math.random() < 0.5;
+        if (hasTerrain) {
+          const terrainLane = Math.floor(Math.random() * 4);
+          if (initBoard[terrainLane] === null) {
+            const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+            initBoard[terrainLane] = {
+              ...cloneCard(terrainCard),
+              id: `terrain-${Date.now()}-${terrainLane}`
+            };
+            addLog(`The trail is obstructed: a ${terrainCard.name} stands in lane ${terrainLane + 1}.`);
+          }
         }
       }
-    }
 
-    setEnemyBoard(initBoard);
+      setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
     // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers
     const initialHand: CardDef[] = [currentTotem ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem) : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs)];
@@ -5202,7 +5458,7 @@ export default function App() {
   const finalizeDraft = () => {
     const hasRemainingPelts = draftPlayerDeck.some(c => c.name === "Trade Pelt") || draftTradesLeft > 0;
     if (hasRemainingPelts) {
-      addLog("You must trade all of your Trade Pelts before entering the woods.");
+      addLog("You must trade all of your Pelts before entering the woods.");
       return;
     }
     setMasterDeck(draftPlayerDeck.map(c => cloneCard(c)));
@@ -5264,8 +5520,8 @@ export default function App() {
         setModalAlert({
           title: "DROWNED BY THE ZEALOT",
           message: poisonedSurvivors
-            ? `The Zealot plunged the ${targetCard.name} into the boiling blood! Its Touch of Death poison eliminated the whole Flock. All future Babtisms are now safe!`
-            : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly.`,
+            ? `The Zealot plunged the ${targetCard.name} into the boiling blood! In its demise, its Unholy Crest cursed the Zealot's flock.`
+            : `The Zealot plunged the ${targetCard.name} into the boiling blood! You watch helplessly...`,
           isWin: false,
           btnText: "Flee the Chapel",
           onAction: () => {
@@ -5282,7 +5538,7 @@ export default function App() {
         triggerSfx('victory');
         setModalAlert({
           title: "BATHED AGAIN",
-          message: `${targetCard.name} absorbs the blood blessing, growing exceptionally formidable!`,
+          message: `${targetCard.name} absorbs the blood blessing, you shudder at its abnormal growth...`,
           isWin: true,
           btnText: "Leave the Chapel",
           onAction: () => {
@@ -5325,7 +5581,7 @@ export default function App() {
     if (!hasValidPair) {
       setModalAlert({
         title: "ALTAR DORMANT",
-        message: "The Altar remains cold and rejects your satchel. You carry only unholy creatures beyond the reach of the ritual.",
+        message: "The Altar remains cold and rejects your Creatures. You carry your unholy beasts beyond the wretched temple.",
         isWin: true,
         btnText: "Depart Altar",
         onAction: () => {
@@ -5352,7 +5608,7 @@ export default function App() {
     }
 
     if (hasMoreSigilsThanOriginal(host)) {
-      addLog(`Cannot perform ritual: ${host.name} already has more sigils than it originally should.`);
+      addLog(`Cannot perform ritual: ${host.name} already has more crests than it originally should.`);
       setIsEventBusy(false);
       return;
     }
@@ -5363,7 +5619,7 @@ export default function App() {
     });
 
     if (mergedSigils.length >= 5) {
-      addLog(`Cannot perform ritual: ${host.name} would have 5 or more sigils.`);
+      addLog(`Cannot perform ritual: ${host.name} would have 5 or more crests.`);
       setIsEventBusy(false);
       return;
     }
@@ -5415,7 +5671,7 @@ export default function App() {
     triggerSfx('play');
     setModalAlert({
       title: "THREAD WOVEN",
-      message: `The stitched ${tribe} crest drew a ${chosen.name} into your deck.`,
+      message: `The stitched ${tribe} crest summoned a ${chosen.name} to join you and your Creatures.`,
       isWin: true,
       btnText: "Proceed",
       onAction: () => {
@@ -5451,7 +5707,7 @@ export default function App() {
     triggerSfx('play');
     setModalAlert({
       title: "BARGAIN SEALED",
-      message: `A shadowy pact was finalized. ${card.name} is bound to your deck.`,
+      message: `The Merchant stirs but thankfully does not wake. It seems you nabbed a ${card.name}!`,
       isWin: true,
       btnText: "Proceed",
       onAction: () => {
@@ -5495,10 +5751,10 @@ export default function App() {
     setModalAlert({
       title: "THE BONE LORD REJOICES",
       message: isGoat
-        ? "The Lord of Bones greedily accepts the Black Goat, bestowing the Major Boon of the Bone Lord (+3 Starting Bones permanently)."
-        : `The Bone Lord accepts ${card.name}, bestowing a Minor Boon (+1 Starting Bone permanently).`,
+        ? "The Lord of Bones greedily accepts the Black Goat, bestowing a Miracle (+3 Starting Bones permanently)."
+        : `The Bone Lord accepts ${card.name}, bestowing a Blessing (+1 Starting Bone permanently).`,
       isWin: true,
-      btnText: "Accept Boon",
+      btnText: "Accept Favor",
       onAction: () => {
         setModalAlert(null);
         setIsEventBusy(false);
@@ -5923,9 +6179,7 @@ export default function App() {
     // 4. Alpha-hugging drop-shadow styling (submerged & goobert cards carry natural paper drops, no neon aura)
     let borderStyle = isTotemAffected
       ? '[filter:drop-shadow(0_0_2px_#93c5fd)_drop-shadow(0_0_5px_#3b82f6)_drop-shadow(0_0_10px_rgba(29,78,216,0.85))]'
-      : card.isMycologistCombined
-        ? '[filter:drop-shadow(0_0_8px_rgba(168,85,247,0.7))]'
-        : options?.isOpponent
+      : options?.isOpponent
           ? '[filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.85))] hover:[filter:drop-shadow(0_6px_12px_rgba(185,28,28,0.5))]'
           : '[filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.85))] hover:[filter:drop-shadow(0_6px_14px_rgba(217,119,6,0.4))]';
 
@@ -6436,10 +6690,15 @@ export default function App() {
         justifyContent: 'center',
       }}
     >
-      <style>{`* { scrollbar-width: none !important; -ms-overflow-style: none !important; } *::-webkit-scrollbar { display: none !important; }`}</style>
-      <div
-        id="game-container"
-        ref={gameContainerRef}
+        <style>{`* { scrollbar-width: none !important; -ms-overflow-style: none !important; } *::-webkit-scrollbar { display: none !important; }`}</style>
+        {/* Secret 5-Tap Trigger */}
+        <div
+          onClick={handleSecretDevTap}
+          className="fixed top-0 left-0 w-14 h-14 z-[9999] cursor-default select-none pointer-events-auto"
+        />
+        <div
+          id="game-container"
+          ref={gameContainerRef}
         style={{
           width: 1280,
           height: 720,
@@ -6452,27 +6711,54 @@ export default function App() {
         }}
       >
         <style>{`
-          @keyframes paperEnterDown {
-            0% {
-              transform: translateY(-100%);
-              box-shadow: 0 35px 50px -10px rgba(0, 0, 0, 0.95);
+            /* Occult Billowing Smoke: Multi-Tiered Organic Cloud Motion */
+            @keyframes smokeBankRollInLeft {
+              0% { transform: translateX(-100%) scale(0.92); opacity: 0; }
+              35% { opacity: 0.95; }
+              100% { transform: translateX(0%) scale(1); opacity: 1; }
             }
-            100% {
-              transform: translateY(0);
-              box-shadow: none;
+            @keyframes smokeBankRollInRight {
+              0% { transform: translateX(100%) scale(0.92); opacity: 0; }
+              35% { opacity: 0.95; }
+              100% { transform: translateX(0%) scale(1); opacity: 1; }
             }
-          }
-          .animate-paper-enter-down {
-            transform: translateY(-100%);
-            animation: paperEnterDown 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-            will-change: transform;
-          }
-          .snapshot-frozen,
-          .snapshot-frozen * {
-            animation: none !important;
-            transition: none !important;
-            opacity: 1 !important;
-          }
+            @keyframes smokePuffSwirlIn {
+              0% { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+              60% { opacity: 0.9; }
+              100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            }
+
+            @keyframes smokeBankDisperseLeft {
+              0% { transform: translateX(0%) scale(1) translateY(0); opacity: 1; }
+              50% { opacity: 0.85; }
+              100% { transform: translateX(-90%) scale(1.15) translateY(-30px); opacity: 0; }
+            }
+            @keyframes smokeBankDisperseRight {
+              0% { transform: translateX(0%) scale(1) translateY(0); opacity: 1; }
+              50% { opacity: 0.85; }
+              100% { transform: translateX(90%) scale(1.15) translateY(-30px); opacity: 0; }
+            }
+            @keyframes smokePuffSwirlOut {
+              0% { transform: scale(1) rotate(0deg); opacity: 1; }
+              100% { transform: scale(1.4) rotate(45deg) translateY(-40px); opacity: 0; }
+            }
+
+            @keyframes smokeSootVeilIn {
+              0% { opacity: 0; }
+              60% { opacity: 0.6; }
+              100% { opacity: 0.98; }
+            }
+            @keyframes smokeSootVeilOut {
+              0% { opacity: 0.98; }
+              40% { opacity: 0.6; }
+              100% { opacity: 0; }
+            }
+
+            @keyframes smokeEmberDrift {
+              0% { transform: translateY(20px) scale(0.8); opacity: 0; }
+              30% { opacity: 1; }
+              100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+            }
           @keyframes deckDrawBreathing {
             0%, 100% {
               filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.7)) drop-shadow(0 0 16px rgba(217, 119, 6, 0.5));
@@ -6530,37 +6816,25 @@ export default function App() {
         .animate-pentagram-rotate {
           animation: splashPentagramRotate 16s ease-in-out infinite;
         }
-      `}</style>
+      }
+        `}</style>
 
-      {/* Outgoing Sheet: stationary backplate under the sliding parchment */}
-      {outgoingSnapshot && (
+        {/* Volumetric Occult Smoke Cloud Transition Overlay */}
+        <SmokeTransitionOverlay phase={smokePhase} />
+
+        {/* Active Stage Screen Container */}
         <div
+          ref={screenStageRef}
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: 1280,
-            height: 720,
-            pointerEvents: 'none',
-            zIndex: 10,
-            overflow: 'hidden',
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            zIndex: 20,
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
           }}
-          className={`snapshot-frozen flex flex-col select-none ${outgoingSnapshot.className}`}
-          dangerouslySetInnerHTML={{ __html: outgoingSnapshot.html }}
-        />
-      )}
-
-      {/* Incoming Sheet: slides down into the frame from above */}
-      <div
-        ref={screenStageRef}
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          zIndex: 20,
-        }}
-        className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none ${getStageBgClass(stage, isBossMatch)} ${ isPaperSliding ? 'animate-paper-enter-down pointer-events-none' : '' } ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
-      >
+          className={`flex flex-col text-slate-200 overflow-hidden font-sans select-none image-rendering-pixelated ${getStageBgClass(stage, isBossMatch)} ${isTutorialGlitching ? 'animate-tutorial-glitch' : ''}`}
+        >
         {/* =========================================================================
             SPLASH SCREEN
            ========================================================================= */}
@@ -6642,20 +6916,79 @@ export default function App() {
   </pre>
 </div>
 
-  {/* Persistent Bottom-Left Discord Link */}
-  <a
-    href="https://discordapp.com/invite/FwPgPW2RcR"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 transition-transform duration-150 hover:scale-110 active:scale-95 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)]"
-    title="[SIDE HUSTLE]"
-  >
-    <img
-  src={discordGif}
-  alt="Discord Community"
-  className="w-11 h-11 sm:w-14 sm:h-14 object-contain [image-rendering:pixelated]"
-/>
-  </a>
+  {/* Persistent Discord Link (Cryptographically Gated) */}
+   <a
+     href={unlockedDiscordUrl || "#"}
+     target={unlockedDiscordUrl ? "_blank" : undefined}
+     rel={unlockedDiscordUrl ? "noopener noreferrer" : undefined}
+     onClick={handleDiscordClick}
+     className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 transition-transform duration-150 hover:scale-110 active:scale-95 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)] cursor-pointer"
+     title={unlockedDiscordUrl ? "[SIDE HUSTLE]" : "[SEALED RITUAL]"}
+   >
+     <img
+       src={discordGif}
+       alt="Discord Community"
+       className={`w-11 h-11 sm:w-14 sm:h-14 object-contain [image-rendering:pixelated] ${
+         !unlockedDiscordUrl ? 'brightness-75 contrast-125 sepia-[0.3]' : ''
+       }`}
+     />
+   </a>
+
+   {/* Occult Passcode Challenge Modal */}
+   {showDiscordPrompt && (
+     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-xs select-none">
+       <div className="relative w-80 p-6 bg-[#140e0a] border-2 border-[#523927] rounded-xs shadow-[0_0_30px_rgba(0,0,0,0.95)] text-center font-mono">
+         <h3 className="text-amber-500 text-sm font-bold tracking-widest uppercase mb-1">
+           Forbidden Communion
+         </h3>
+         <p className="text-[11px] text-stone-400 mb-4 tracking-normal">
+           Speak the cipher to break the seal.
+         </p>
+
+         <form onSubmit={handleAttemptUnlock} className="flex flex-col gap-3">
+           <input
+             type="password"
+             autoFocus
+             value={discordInput}
+             onChange={(e) => {
+               setDiscordInput(e.target.value);
+               setDiscordError(false);
+             }}
+             placeholder="PASSCODE"
+             className={`w-full px-3 py-2 bg-[#090605] border ${
+               discordError ? 'border-red-600 animate-shake' : 'border-[#3a281c] focus:border-amber-600'
+             } text-amber-200 text-center tracking-widest text-xs outline-none rounded-xs transition-colors`}
+           />
+
+           {discordError && (
+             <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">
+               The seal remains unbroken
+             </span>
+           )}
+
+           <div className="flex gap-2 justify-center mt-2">
+             <button
+               type="submit"
+               className="px-4 py-1.5 bg-[#2d1b13] hover:bg-[#42281c] text-amber-300 text-xs uppercase tracking-wider border border-[#523927] active:scale-95 transition-transform"
+             >
+               Unbind
+             </button>
+             <button
+               type="button"
+               onClick={() => {
+                 setShowDiscordPrompt(false);
+                 setDiscordError(false);
+                 setDiscordInput('');
+               }}
+               className="px-4 py-1.5 bg-black/40 hover:bg-black/60 text-stone-500 hover:text-stone-300 text-xs uppercase tracking-wider border border-transparent transition-colors"
+             >
+               Flee
+             </button>
+           </div>
+         </form>
+       </div>
+     </div>
+   )}
 
             {/* Ritual Action Button */}
             <button
@@ -7150,13 +7483,15 @@ export default function App() {
           >
             DECK ({masterDeck.length})
           </button>
-          <button
-            onClick={openDevMenu}
-            className="bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5"
-            title="Development Tools"
-          >
-            DEV TOOLS
-          </button>
+          {showDevTools && (
+              <button
+                onClick={openDevMenu}
+                className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                title="Development Tools"
+              >
+                <span>DEV TOOLS</span>
+              </button>
+            )}
         </div>
       )}
 
@@ -7424,7 +7759,7 @@ export default function App() {
             <div className="text-[10px] text-amber-700/80 tracking-widest uppercase mb-1">+-- FREE OF COST --+</div>
             <h1 className="text-2xl sm:text-3xl font-mono font-bold uppercase tracking-widest text-amber-200 mb-1">Blood & Bone Pact</h1>
             <p className="text-amber-400/70 text-xs mb-8 text-center max-w-md uppercase tracking-wider">
-              The Merchant's dozed off. Try helping yourself to a freebie.
+              The Merchant's dozed off. Try helping yourself to an unlabeled freebie.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-8">
@@ -7526,11 +7861,11 @@ export default function App() {
               </div>
             ) : (
               <>
-                <p className="text-amber-400/70 text-xs mb-8 text-center max-w-lg leading-relaxed">
-                  The wretched Weaver glances over her shoulder without halting her spinning loom. She beckons you closer, hand outstreched and palm open.
-                </p>
+                  <p className="text-amber-400/70 text-xs mb-14 text-center max-w-lg leading-relaxed shrink-0">
+                    The wretched Weaver glances over her shoulder without halting her spinning loom. She beckons you closer, hand outstretched and palm open.
+                  </p>
 
-                <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8">
+                  <div className="flex flex-wrap gap-4 justify-center max-w-4xl mb-8 pt-4">
                   {masterDeck.map((c, idx) => {
                     const isSelected = mycoSelectedIndices.includes(idx);
                     const isDuplicateCard = masterDeck.filter(card => card.name === c.name).length >= 2;
@@ -9076,13 +9411,15 @@ export default function App() {
                       <span>SANCTUARY</span>
                     </button>
 
-                    <button
-                      onClick={openDevMenu}
-                      className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
-                      title="Development Tools"
-                    >
-                      <span>DEV TOOLS</span>
-                    </button>
+                    {showDevTools && (
+                        <button
+                          onClick={openDevMenu}
+                          className="w-38 sm:w-40 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#2f241c] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[10px] sm:text-[10.5px] uppercase tracking-widest text-[#cfb794] hover:text-[#f3ede2] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 flex items-center justify-center gap-2"
+                          title="Development Tools"
+                        >
+                          <span>DEV TOOLS</span>
+                        </button>
+                      )}
                   </div>
                 </div>
 
@@ -9559,76 +9896,76 @@ export default function App() {
             <div className="absolute top-0 bottom-0 right-[2px] w-[1px] bg-white/10 rounded-full z-20 pointer-events-none" />
 
             {/* Organic Viscous Blood Column */}
-            {(() => {
-              const fillPercent = isOverkill || scale >= 5
-                ? 100
-                : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
+      {(() => {
+        const fillPercent = isOverkill || scale >= 5
+          ? 100
+          : Math.min(100, Math.max(0, ((scale + 5) / 10) * 100));
 
-              return (
+        return (
+          <div
+            className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+              scaleRumble || isOverkill
+                ? 'animate-pulse filter brightness-110'
+                : ''
+            }`}
+            style={{
+              height: `${fillPercent}%`,
+              background: 'linear-gradient(to top, #0f0102 0%, #290206 20%, #4d050a 45%, #7a0c14 70%, #991320 90%, #b91c1c 100%)',
+              boxShadow: isOverkill || scale >= 5
+                ? '0 0 24px rgba(220, 38, 38, 0.95), inset 0 0 8px rgba(254, 202, 202, 0.5)'
+                : '0 0 12px rgba(153, 19, 32, 0.8), inset 0 0 4px rgba(254, 202, 202, 0.3)',
+            }}
+          >
+            {/* Rising Arterial Micro-Bubbles */}
+            {fillPercent > 8 && (
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div
-                  className={`absolute bottom-0 inset-x-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-                    scaleRumble || isOverkill
-                      ? 'animate-pulse filter brightness-110'
-                      : ''
-                  }`}
-                  style={{
-                    height: `${fillPercent}%`,
-                    background: 'linear-gradient(to top, #1c0205 0%, #43050c 18%, #6e0b15 42%, #991320 68%, #ba1929 88%, #dc2626 100%)',
-                    boxShadow: isOverkill || scale >= 5
-                      ? '0 0 20px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(254, 202, 202, 0.4)'
-                      : '0 0 10px rgba(185, 28, 28, 0.75), inset 0 0 4px rgba(254, 202, 202, 0.25)',
-                  }}
+                  className="absolute left-[20%] w-[3px] h-[3px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.7)]"
+                  style={{ animation: 'bloodBubbleAscendA 3.2s ease-in infinite' }}
+                />
+                <div
+                  className="absolute left-[62%] w-[2px] h-[2px] rounded-full bg-rose-200/40 border border-white/50 shadow-[0_0_2px_rgba(255,255,255,0.5)]"
+                  style={{ animation: 'bloodBubbleAscendB 4.1s ease-in infinite 1.2s' }}
+                />
+                <div
+                  className="absolute left-[38%] w-[2.5px] h-[2.5px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.6)]"
+                  style={{ animation: 'bloodBubbleAscendC 2.7s ease-in infinite 0.6s' }}
+                />
+              </div>
+            )}
+
+            {/* Flowing Wavy Surface Meniscus */}
+            {fillPercent > 0 && (
+              <div className="absolute -top-[3.5px] left-0 right-0 h-[7px] overflow-hidden pointer-events-none z-10">
+                <svg
+                  viewBox="0 0 64 8"
+                  className="w-[200%] h-full"
+                  style={{ animation: 'bloodWaveScroll 2.2s linear infinite' }}
+                  preserveAspectRatio="none"
                 >
-                  {/* Rising Arterial Micro-Bubbles */}
-                  {fillPercent > 8 && (
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                      <div
-                        className="absolute left-[20%] w-[3px] h-[3px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.7)]"
-                        style={{ animation: 'bloodBubbleAscendA 3.2s ease-in infinite' }}
-                      />
-                      <div
-                        className="absolute left-[62%] w-[2px] h-[2px] rounded-full bg-rose-200/40 border border-white/50 shadow-[0_0_2px_rgba(255,255,255,0.5)]"
-                        style={{ animation: 'bloodBubbleAscendB 4.1s ease-in infinite 1.2s' }}
-                      />
-                      <div
-                        className="absolute left-[38%] w-[2.5px] h-[2.5px] rounded-full bg-rose-200/40 border border-white/60 shadow-[0_0_2px_rgba(255,255,255,0.6)]"
-                        style={{ animation: 'bloodBubbleAscendC 2.7s ease-in infinite 0.6s' }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Flowing Wavy Surface Meniscus */}
-                  {fillPercent > 0 && (
-                    <div className="absolute -top-[3.5px] left-0 right-0 h-[7px] overflow-hidden pointer-events-none z-10">
-                      <svg
-                        viewBox="0 0 64 8"
-                        className="w-[200%] h-full"
-                        style={{ animation: 'bloodWaveScroll 2.4s linear infinite' }}
-                        preserveAspectRatio="none"
-                      >
-                        <path
-                          d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4 L 64 8 L 0 8 Z"
-                          fill="#dc2626"
-                        />
-                        <path
-                          d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4"
-                          fill="none"
-                          stroke="#ffe4e6"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          className="filter drop-shadow-[0_0_3px_rgba(254,202,202,0.95)]"
-                        />
-                      </svg>
-                    </div>
-                  )}
-
-                  {/* Overkill Arterial Surge */}
-                  {(isOverkill || scale >= 5) && (
-                    <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
-                  )}
+                  <path
+                    d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4 L 64 8 L 0 8 Z"
+                    fill="#991b1b"
+                  />
+                  <path
+                    d="M 0 4 Q 8 0.5, 16 4 T 32 4 T 48 4 T 64 4"
+                    fill="none"
+                    stroke="#fecdd3"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    className="filter drop-shadow-[0_0_4px_rgba(254,202,202,0.95)]"
+                  />
+                </svg>
                 </div>
-              );
-            })()}
+              )}
+
+              {/* Overkill Arterial Surge */}
+              {(isOverkill || scale >= 5) && (
+                <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-red-400/80 via-red-600/40 to-transparent animate-ping opacity-90 pointer-events-none" />
+              )}
+            </div>
+          );
+        })()}
 
           {/* Arterial Limit Ampoule State: Pre-scored until breached, then fractured for the rest of the battle */}
             {isAmpouleCracked ? (
