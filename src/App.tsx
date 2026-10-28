@@ -502,6 +502,88 @@ export const ALL_CARD_LOOKUP: Record<string, CardDef> = {
   "Stone Wall": CARD_STONE_WALL,
   "Felled Tree": CARD_FELLED_TREE,
 };
+
+// --- Custom Items & Item Token Definitions ---
+export const CARD_FLAMING_SKELETON: CardDef = {
+  id: 'flaming_skeleton',
+  name: 'Flaming Skeleton',
+  class: 'No Class',
+  attack: 3,
+  health: 1,
+  cost: 0,
+  boneCost: 0,
+  emoji: '🔥',
+  sigils: []
+};
+
+export type ItemId =
+  | 'magical_hat'
+  | 'bone_lords_horn'
+  | 'joker_stamp'
+  | 'large_matchbook'
+  | 'coin_purse'
+  | 'bronze_crucifix'
+  | 'loaded_die'
+  | 'bronze_acorn';
+
+export interface ItemDef {
+  id: ItemId;
+  name: string;
+  emoji: string;
+  description: string;
+}
+
+export const ALL_ITEMS: Record<ItemId, ItemDef> = {
+  magical_hat: {
+    id: 'magical_hat',
+    name: 'Magical Hat',
+    emoji: '🎩',
+    description: '50% chance to summon a Rabbit to hand, or crush a player slot with a Stone Wall.'
+  },
+  bone_lords_horn: {
+    id: 'bone_lords_horn',
+    name: "Bone Lord's Horn",
+    emoji: '📯',
+    description: 'Evolves all allied creatures into their tribal skeletal equivalents.'
+  },
+  joker_stamp: {
+    id: 'joker_stamp',
+    name: 'Joker Stamp',
+    emoji: '🃏',
+    description: 'Submerges an enemy front-row card: replaces sigils with Waterborne, sets stats to 0/1.'
+  },
+  large_matchbook: {
+    id: 'large_matchbook',
+    name: 'Large Matchbook',
+    emoji: '🔥',
+    description: 'Incinerates an enemy card and inflicts lingering Burn on opposing lanes.'
+  },
+  coin_purse: {
+    id: 'coin_purse',
+    name: 'Coin Purse',
+    emoji: '💰',
+    description: 'Provides +4 Bones. The Zealot might trade for it in Phase 2.'
+  },
+  bronze_crucifix: {
+    id: 'bronze_crucifix',
+    name: 'Bronze Crucifix',
+    emoji: '✝️',
+    description: 'Bypasses Bone Lord phases or dims the Blood Moon.'
+  },
+  loaded_die: {
+    id: 'loaded_die',
+    name: 'Loaded Die',
+    emoji: '🎲',
+    description: 'Roll to draw cards from chosen deck. Beware rolling a five.'
+  },
+  bronze_acorn: {
+    id: 'bronze_acorn',
+    name: 'Bronze Acorn',
+    emoji: '🌰',
+    description: 'Infuses all Squirrels with +1 Power and +1 Health for this duel.'
+  }
+};
+
 MAIN_DECK_POOL.forEach(c => {
   ALL_CARD_LOOKUP[c.name] = c;
 });
@@ -510,11 +592,11 @@ export const BOSS_EXCLUSIVE_CARDS: CardDef[] = [
   { name: "Skeleton", class: "No Class", attack: 1, health: 1, emoji: "💀", sigils: ["Brittle"] },
   { name: "Geist", class: "No Class", attack: 0, health: 7, emoji: "👻", sigils: ["Burrower", "Fledgling"], evolvesInto: "Ghast" },
   { name: "Ghast", class: "No Class", attack: 3, health: 9, emoji: "🌫️", sigils: ["Airborne", "Brittle"] },
-  { name: "Skeleton Canine", class: "No Class", attack: 2, health: 2, emoji: "🦴", sigils: ["Double Strike"] },
-  { name: "Exoskeleton", class: "No Class", attack: 1, health: 1, emoji: "🦂", sigils: ["Trifurcated Strike", "Brittle"] },
-  { name: "Tortoise Shell", class: "No Class", attack: 1, health: 2, emoji: "🐢", sigils: ["Waterborne"] },
+  { name: "Skeleton Canine", class: "Canine", attack: 2, health: 2, emoji: "🦴", sigils: ["Double Strike"] },
+  { name: "Exoskeleton", class: "Insect", attack: 1, health: 1, emoji: "🦂", sigils: ["Trifurcated Strike", "Brittle"] },
+  { name: "Tortoise Shell", class: "Reptile", attack: 1, health: 2, emoji: "🐢", sigils: ["Waterborne"] },
   { name: "Anubis", class: "No Class", attack: 1, health: 4, emoji: "⚰️", sigils: ["Bifurcated Strike"] },
-  { name: "Reaper", class: "No Class", attack: 4, health: 1, emoji: "⌛", sigils: ["Stinky", "Airborne"] },
+  { name: "Reaper", class: "Avian", attack: 4, health: 1, emoji: "⌛", sigils: ["Stinky", "Airborne"] },
   { name: "BLOOD MOON", class: "No Class", attack: 2, health: 80, emoji: "🌑", sigils: ["Mighty Leap", "Made of Stone", "Omnistrike", "Tidal Lock", "Stinky"], isMassive: true }
 ];
 
@@ -2149,6 +2231,19 @@ export default function App() {
   });
   const currentScaleRef = useRef<number>(1);
 
+// --- Items System State ---
+  const [items, setItems] = useState<(ItemId | null)[]>([
+    'coin_purse',
+    'magical_hat',
+    'large_matchbook'
+  ]);
+  const [itemTargetMode, setItemTargetMode] = useState<ItemId | null>(null);
+  const [itemTargetSourceSlot, setItemTargetSourceSlot] = useState<number | null>(null);
+  const [crucifixUsedThisDuel, setCrucifixUsedThisDuel] = useState<boolean>(false);
+  const [isAcornActive, setIsAcornActive] = useState<boolean>(false);
+  const [dieModal, setDieModal] = useState<{ roll: number; count: number } | null>(null);
+  const [isBoardShaking, setIsBoardShaking] = useState<boolean>(false);
+
   const updateScale = useCallback(() => {
     const scaleX = window.innerWidth / 1280;
     const scaleY = window.innerHeight / 720;
@@ -2711,6 +2806,29 @@ export default function App() {
         activeDialogue: "Your prayers fall on deaf ears, heretic! Encased in stone and paralyzed by grace—watch as my serpent claims your strongest!",
       }));
     }
+
+    // --- ITEM EFFECT: Flaming Skeleton Spread at End of Opponent Turn ---
+    setEnemyBoard(prev => {
+      const next = [...prev];
+      let spreadOccurred = false;
+      for (let i = 0; i < 4; i++) {
+        if (next[i]?.name === 'Flaming Skeleton') {
+          const adjLanes = [i - 1, i + 1].filter(l => l >= 0 && l <= 3);
+          for (const adj of adjLanes) {
+            if (next[adj]?.name === 'Skeleton') {
+              next[adj] = {
+                ...cloneCard(CARD_FLAMING_SKELETON),
+                id: `flaming-skeleton-${Date.now()}-${adj}`
+              };
+              spreadOccurred = true;
+              addLog(`The inferno catches! Skeleton in lane ${adj + 1} becomes a Flaming Skeleton.`);
+            }
+          }
+        }
+      }
+      return spreadOccurred ? next : prev;
+    });
+
     setPhase('PLAY');
     triggerSfx('draw');
   };
@@ -3126,7 +3244,28 @@ export default function App() {
       }
       setHoveredSlotLane(foundLane);
     };
-
+// --- ITEM EFFECT: Burn Ticks at End of Player Turn ---
+    setPlayerBoard(prev => {
+      const next = [...prev];
+      let boardChanged = false;
+      for (let i = 0; i < 4; i++) {
+        const c = next[i];
+        if (c && (c as any).isBurned) {
+          boardChanged = true;
+          const newAtk = Math.max(0, (c.attack || 0) - 1);
+          const newHp = (c.health || 0) - 2;
+          if (newHp <= 0) {
+            addLog(`The flames consume your ${c.name} in lane ${i + 1}.`);
+            next[i] = null;
+          } else {
+            c.attack = newAtk;
+            c.health = newHp;
+            addLog(`Your ${c.name} in lane ${i + 1} suffers burn (-1 ATK, -2 HP).`);
+          }
+        }
+      }
+      return boardChanged ? next : prev;
+    });
     const handleGlobalPointerUp = (e: PointerEvent) => {
       const container = gameContainerRef.current;
       const currentDrag = dragState;
@@ -3182,6 +3321,267 @@ export default function App() {
     };
   }, [dragState]);
 
+// --- Items Engine Execution Handlers ---
+  const handleUseItem = (slotIndex: number) => {
+    if (phase !== 'PLAY') return;
+    const itemId = items[slotIndex];
+    if (!itemId) return;
+
+    // Targeted items toggle board selection mode
+    if (itemId === 'joker_stamp' || itemId === 'large_matchbook') {
+      if (itemTargetMode === itemId && itemTargetSourceSlot === slotIndex) {
+        setItemTargetMode(null);
+        setItemTargetSourceSlot(null);
+        addLog('Targeting cancelled.');
+      } else {
+        setItemTargetMode(itemId);
+        setItemTargetSourceSlot(slotIndex);
+        addLog(`Select a creature on the opponent's front row to use ${ALL_ITEMS[itemId].name}.`);
+      }
+      return;
+    }
+
+    consumeAndExecuteItem(slotIndex, itemId);
+  };
+
+  const consumeAndExecuteItem = (slotIndex: number, itemId: ItemId) => {
+    const nextItems = [...items];
+
+    switch (itemId) {
+      case 'magical_hat': {
+        nextItems[slotIndex] = null;
+        triggerSfx('draw');
+        if (Math.random() < 0.5) {
+          const rab = cloneCard(TOKEN_RABBIT);
+          setHand(prev => [...prev, rab]);
+          addLog("You reach into the Magical Hat... and pull out a Rabbit!");
+        } else {
+          const lane = Math.floor(Math.random() * 4);
+          const stoneWallCard = ALL_CARD_LOOKUP['Stone Wall'] || {
+            name: 'Stone Wall',
+            class: 'Terrain' as any,
+            attack: 0,
+            health: 3,
+            cost: 0,
+            emoji: '🧱',
+            sigils: []
+          };
+          setPlayerBoard(prev => {
+            const next = [...prev];
+            if (next[lane]) {
+              addLog(`The Magical Hat drops a Stone Wall into lane ${lane + 1}, crushing your ${next[lane]!.name}!`);
+            } else {
+              addLog(`The Magical Hat manifests a Stone Wall in lane ${lane + 1}.`);
+            }
+            next[lane] = {
+              ...cloneCard(stoneWallCard),
+              id: `stone-hat-${Date.now()}`
+            };
+            return next;
+          });
+        }
+        break;
+      }
+
+      case 'bone_lords_horn': {
+        nextItems[slotIndex] = null;
+        triggerSfx('bone');
+        setIsBoardShaking(true);
+        setTimeout(() => setIsBoardShaking(false), 600);
+
+        setPlayerBoard(prev => {
+          return prev.map((card, idx) => {
+            if (!card) return null;
+            let replacementKey = 'Skeleton';
+            if (card.class === 'Insect') replacementKey = 'Exoskeleton';
+            else if (card.class === 'Reptile') replacementKey = 'Tortoise Shell';
+            else if (card.class === 'Canine') replacementKey = 'Skeleton Canine';
+            else if (card.class === 'Hooved') replacementKey = 'Demon Elk';
+            else if (card.class === 'Avian') replacementKey = 'Reaper';
+
+            const baseCard = ALL_CARD_LOOKUP[replacementKey] || ALL_CARD_LOOKUP['Skeleton'];
+            addLog(`Your ${card.name} evolves into a ${baseCard.name}!`);
+            return {
+              ...cloneCard(baseCard),
+              id: `bonehorn-${Date.now()}-${idx}`
+            };
+          });
+        });
+        break;
+      }
+
+      case 'coin_purse': {
+        if (isBossMatch && bossState?.type === 'Zealot' && bossPhase === 2) {
+          nextItems[slotIndex] = 'bronze_crucifix';
+          triggerSfx('bell');
+          setModalAlert({
+            title: 'Render Unto Caesar',
+            message: 'The Zealot seizes the pouch of coins with feverish eyes and tosses you an ancient Bronze Crucifix in return.',
+            btnText: 'Accept the Relic',
+            onAction: () => setModalAlert(null as any)
+          });
+          addLog("The Zealot bartered the Bronze Crucifix for your Coin Purse.");
+        } else {
+          nextItems[slotIndex] = null;
+          triggerSfx('bone');
+          setBones(b => b + 4);
+          addLog("You untie the Coin Purse, gathering 4 bones.");
+        }
+        break;
+      }
+
+      case 'bronze_crucifix': {
+        if (!isBossMatch || bossState?.type !== 'BoneLord') {
+          if (crucifixUsedThisDuel) {
+            addLog("The Bronze Crucifix lies inert for the remainder of this duel.");
+            return;
+          }
+          setCrucifixUsedThisDuel(true);
+          addLog("...after picking this up, you don't really want to get rid of it just yet...");
+          return;
+        }
+
+        nextItems[slotIndex] = null;
+        triggerSfx('hit');
+
+        if (bossPhase === 1 || bossPhase === 2) {
+          addLog("The Bronze Crucifix radiates blinding radiance! The phase is severed.");
+          setBossPhase(p => p + 1);
+        } else if (bossPhase === 3) {
+          setBossState(prev => ({ ...prev, isBloodMoonDarkened: true }));
+          addLog("...the moon turns dark...");
+          setModalAlert({
+            title: 'The Bone Lord Speaks',
+            message: '....fool.....',
+            btnText: 'Witness',
+            onAction: () => {
+              setModalAlert(null as any);
+              setBossPhase(p => p + 1);
+            }
+          });
+        }
+        break;
+      }
+
+      case 'loaded_die': {
+        nextItems[slotIndex] = null;
+        triggerSfx('draw');
+        const roll = Math.floor(Math.random() * 6) + 1;
+        if (roll === 5) {
+          setHand(prev => {
+            const count = prev.length;
+            const rabbits = Array.from({ length: count }, () => cloneCard(TOKEN_RABBIT));
+            addLog(`You rolled a 5! Your entire hand turns into ${count} Rabbits!`);
+            return rabbits;
+          });
+        } else {
+          const drawCount = (roll === 1 || roll === 3) ? 1 : Math.floor(roll / 2);
+          setDieModal({ roll, count: drawCount });
+        }
+        break;
+      }
+
+      case 'bronze_acorn': {
+        nextItems[slotIndex] = null;
+        triggerSfx('play');
+        setIsAcornActive(true);
+
+        const buffCard = (c: CardDef | null) => {
+          if (c && c.name === 'Squirrel') {
+            return {
+              ...c,
+              attack: (c.attack || 0) + 1,
+              health: (c.health || 0) + 1
+            };
+          }
+          return c;
+        };
+
+        setPlayerBoard(prev => prev.map(buffCard));
+        setHand(prev => prev.map(c => buffCard(c)!));
+        addLog("The Bronze Acorn takes root. All Squirrels gain +1 Power and +1 Health!");
+        break;
+      }
+    }
+
+    setItems(nextItems);
+  };
+
+  const handleItemTargetLane = (laneIndex: number) => {
+    if (!itemTargetMode || itemTargetSourceSlot === null) return;
+    const targetCard = enemyBoard[laneIndex];
+    if (!targetCard) return;
+
+    const sourceSlot = itemTargetSourceSlot;
+    const mode = itemTargetMode;
+
+    if (mode === 'joker_stamp') {
+      setEnemyBoard(prev => {
+        const next = [...prev];
+        if (next[laneIndex]) {
+          next[laneIndex] = {
+            ...next[laneIndex]!,
+            sigils: ['Waterborne'],
+            attack: 0,
+            health: 1
+          };
+        }
+        return next;
+      });
+      addLog(`The Joker Stamp brands enemy ${targetCard.name} with Waterborne, reducing it to 0/1.`);
+    } else if (mode === 'large_matchbook') {
+      if (targetCard.name === 'Stone Wall') {
+        setIsBoardShaking(true);
+        setTimeout(() => setIsBoardShaking(false), 500);
+        addLog("The Stone Wall remains unscathed by the matchbook's flame!");
+      } else if (targetCard.name === 'Skeleton') {
+        setEnemyBoard(prev => {
+          const next = [...prev];
+          next[laneIndex] = {
+            ...cloneCard(CARD_FLAMING_SKELETON),
+            id: `flaming-skeleton-${Date.now()}`
+          };
+          return next;
+        });
+        addLog(`The Skeleton erupts into a Flaming Skeleton!`);
+      } else {
+        setEnemyBoard(prev => {
+          const next = [...prev];
+          next[laneIndex] = null;
+          return next;
+        });
+        addLog(`The Large Matchbook incinerates enemy ${targetCard.name}!`);
+      }
+
+      // Inflict Burn on player's corresponding and adjacent columns
+      setPlayerBoard(prev => {
+        const next = [...prev];
+        const affectedCols = [laneIndex - 1, laneIndex, laneIndex + 1].filter(c => c >= 0 && c <= 3);
+        affectedCols.forEach(col => {
+          const pc = next[col];
+          if (pc) {
+            (pc as any).isBurned = true;
+            pc.attack = Math.max(0, (pc.attack || 0) - 1);
+            pc.health = (pc.health || 0) - 2;
+            if (pc.health <= 0) {
+              addLog(`The backdraft burns away your ${pc.name} in lane ${col + 1}!`);
+              next[col] = null;
+            } else {
+              addLog(`Your ${pc.name} in lane ${col + 1} catches fire (-1 ATK, -2 HP)!`);
+            }
+          }
+        });
+        return next;
+      });
+    }
+
+    const nextItems = [...items];
+    nextItems[sourceSlot] = null;
+    setItems(nextItems);
+    setItemTargetMode(null);
+    setItemTargetSourceSlot(null);
+  };
+  
   // --- End Turn & Combat Resolution ---
   const handleEndTurn = async (forceForfeit: boolean = false) => {
     if (phase !== 'PLAY' && !forceForfeit) return;
@@ -4637,26 +5037,30 @@ export default function App() {
   };
 
   const calculateGrade = (stats: RunStats): { letter: string; color: string } => {
-    const rawScore = Math.min(
-      100,
-      Math.max(
-        0,
-        Math.round(
-          stats.clearedStages * 3 +
-          stats.bossesDefeated * 8 +
-          stats.finalBossesDefeated * 15 +
-          stats.grizzlyWallsSurvived * 10 +
-          stats.enemyCardsDestroyed * 0.4 +
-          stats.scaleDamageDealt * 0.2 -
-          stats.scaleDamageTaken * 0.25
-        )
-      )
+    let score = Math.round(
+      stats.clearedStages * 1.5 +
+      stats.bossesDefeated * 22 +
+      stats.finalBossesDefeated * 35 +
+      stats.enemyCardsDestroyed * 0.3 +
+      stats.scaleDamageDealt * 0.15 -
+      stats.scaleDamageTaken * 0.5
     );
+
+    // Hard rank milestones: Skill & progression gating
+    if (stats.bossesDefeated === 0 && stats.finalBossesDefeated === 0) {
+      score = Math.min(score, 58); // Capped at C
+    } else if (stats.bossesDefeated === 1 && stats.finalBossesDefeated === 0) {
+      score = Math.min(score, 74); // Capped at B
+    } else if (stats.bossesDefeated === 2 && stats.finalBossesDefeated === 0) {
+      score = Math.min(score, 88); // Capped at A
+    }
+
+    const rawScore = Math.min(100, Math.max(0, score));
 
     let baseGrade = 'F';
     let color = 'text-red-600';
 
-    if (rawScore >= 90) {
+    if (rawScore >= 95) {
       baseGrade = 'S';
       color = 'text-amber-400';
     } else if (rawScore >= 80) {
@@ -4674,8 +5078,8 @@ export default function App() {
     }
 
     let suffix = '';
-    if (stats.finalBossesDefeated >= 3) suffix = '++';
-    else if (stats.finalBossesDefeated === 2) suffix = '+';
+    if (stats.finalBossesDefeated >= 1 || stats.bossesDefeated >= 4) suffix = '++';
+    else if (stats.bossesDefeated === 3) suffix = '+';
 
     return { letter: `${baseGrade}${suffix}`, color };
   };
@@ -4873,6 +5277,14 @@ export default function App() {
     totemOverride?: Totem | null
   ) => {
     setScale(-permanentScaleDebuff);
+
+    // Duel-specific item state resets
+    setCrucifixUsedThisDuel(false);
+    setIsAcornActive(false);
+    setItemTargetMode(null);
+    setItemTargetSourceSlot(null);
+    setDieModal(null);
+
     setPhase('PLAY');
 
     // Roll the new stage name ONLY when the first battle of a new stage begins (after Duels 6, 14, and 24)
@@ -5205,21 +5617,56 @@ export default function App() {
         addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
       }
 
-      // Natural Encounter Architecture: Stage 1+ encounters feature native obstacles
-      // Duels 1-2 remain clear; Duel 3+ has a 50% chance to feature a terrain blocker
+      // Natural Encounter Architecture: 2 to 4 terrain obstacles across both boards
+      // Heavily weighted to the player's side; enemy side occasionally receives 1 (or rarely 2)
       if (!isBoss) {
-        const duelCount = typeof duelsCompleted !== 'undefined' ? duelsCompleted : level;
-        const hasTerrain = duelCount >= 2 && Math.random() < 0.5;
-        if (hasTerrain) {
-          const terrainLane = Math.floor(Math.random() * 4);
-          if (initBoard[terrainLane] === null) {
-            const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
-            initBoard[terrainLane] = {
-              ...cloneCard(terrainCard),
-              id: `terrain-${Date.now()}-${terrainLane}`
-            };
-            addLog(`The trail is obstructed: a ${terrainCard.name} stands in lane ${terrainLane + 1}.`);
-          }
+        const nextPlayerBoard: (CardDef | null)[] = [null, null, null, null];
+        const totalObstacles = Math.floor(Math.random() * 3) + 2; // Always 2, 3, or 4
+
+        // Enemy receives 1 obstacle ~30% of the time, 2 obstacles ~5% of the time (if total >= 3), else 0
+        const enemyRoll = Math.random();
+        let enemyObstacleTarget = 0;
+        if (enemyRoll < 0.05 && totalObstacles >= 3) {
+          enemyObstacleTarget = 2;
+        } else if (enemyRoll < 0.35 && totalObstacles >= 2) {
+          enemyObstacleTarget = 1;
+        }
+
+        // Remaining obstacles populate the player's board (capped at 4)
+        const playerObstacleTarget = Math.min(4, totalObstacles - enemyObstacleTarget);
+
+        // Populate Player Obstacles
+        const availablePlayerLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < playerObstacleTarget; i++) {
+          const lane = availablePlayerLanes[i];
+          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          nextPlayerBoard[lane] = {
+            ...cloneCard(terrainCard),
+            id: `terrain-player-${Date.now()}-${lane}`
+          };
+        }
+
+        // Populate Enemy Obstacles in open frontline slots
+        const availableEnemyLanes = [0, 1, 2, 3]
+          .filter(l => initBoard[l] === null)
+          .sort(() => Math.random() - 0.5);
+        for (let i = 0; i < Math.min(enemyObstacleTarget, availableEnemyLanes.length); i++) {
+          const lane = availableEnemyLanes[i];
+          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          initBoard[lane] = {
+            ...cloneCard(terrainCard),
+            id: `terrain-enemy-${Date.now()}-${lane}`
+          };
+        }
+
+        setPlayerBoard(nextPlayerBoard);
+
+        const summary = `${playerObstacleTarget} on your side${enemyObstacleTarget > 0 ? `, ${enemyObstacleTarget} on opponent's side` : ''}`;
+        addLog(`The wilderness encroaches: ${totalObstacles} obstacles have formed (${summary}).`);
+      } else {
+        // Boss encounters: ensure player board starts clean unless boss rules dictate otherwise
+        if (bossType !== 'Zealot') {
+          setPlayerBoard([null, null, null, null]);
         }
       }
 
@@ -5250,6 +5697,12 @@ export default function App() {
     setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
     addLog("Turn 1 begins: Your opening hand is dealt. Play creatures or make sacrifices.");
+// Reset duel-specific item states
+    setCrucifixUsedThisDuel(false);
+    setIsAcornActive(false);
+    setItemTargetMode(null);
+    setItemTargetSourceSlot(null);
+    setDieModal(null);
 
     setTurnNumber(1);
     setIsAmpouleCracked(false);
@@ -7140,7 +7593,7 @@ export default function App() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#a8957f] uppercase tracking-wider text-[11px]">Bosses Slain</span>
-                  <span className="text-purple-300 font-bold text-sm">{runStats.finalBossesDefeated}</span>
+                  <span className="text-purple-300 font-bold text-sm">{runStats.bossesDefeated}</span>
                 </div>
               </div>
 
@@ -9791,15 +10244,15 @@ export default function App() {
 
               {/* FIXED FLANK: Bleeding Stone Runnel & Blood Ampoule Rack + S & C Draw Decks directly beneath */}
 <div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-3 w-44 select-none pointer-events-auto z-20">
-  {/* Floating OVERKILL text anchored above runnel without displacing layout */}
-  {isOverkill && (
-    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
-      OVERKILL
-    </div>
-  )}
+    {/* Floating OVERKILL text anchored above runnel without displacing layout */}
+    {isOverkill && (
+      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-mono font-black text-red-500 uppercase tracking-widest animate-bounce drop-shadow-[0_0_12px_rgba(239,68,68,1)] text-center leading-none whitespace-nowrap pointer-events-none z-30">
+        OVERKILL
+      </div>
+    )}
 
-  {/* 1. THE BLEEDING STONE RUNNEL (Replaces Brass Balance Scale) */}
-  <div
+    {/* 1. THE BLEEDING STONE RUNNEL (Replaces Brass Balance Scale) */}
+    <div
     className={`w-12 h-80 bg-[#120f0d] border border-[#2b221b] rounded-sm relative flex flex-col items-center justify-between py-2.5 shadow-[inset_0_3px_10px_rgba(0,0,0,0.95),0_2px_5px_rgba(0,0,0,0.8)] select-none transition-all ${
       scaleRumble ? 'animate-scale-rumble shadow-[0_0_20px_rgba(220,38,38,0.55)]' : ''
     }`}
@@ -10043,7 +10496,6 @@ export default function App() {
       </div>
     );
   })()}
-
                 {/* Bone Reservoir Tray (Relocated beneath Ampoule Rack) */}
                 <div className="flex flex-col items-center gap-2 w-full mt-2.5 select-none">
                   <div className="font-['Cinzel',_serif] font-bold text-xs sm:text-sm tracking-[0.22em] uppercase text-[#9e8368] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
@@ -10155,7 +10607,42 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-              </div>
+
+  {/* Vertical 3-Slot Item Rack (Pinned to the upper right quadrant alongside the runnel) */}
+  <div className="absolute left-[calc(50%+30px)] top-3 flex flex-col items-center justify-center gap-2 p-1.5 bg-[#100b08]/95 border border-[#3e2316] rounded-sm shadow-[inset_0_2px_8px_rgba(0,0,0,0.9),0_4px_12px_rgba(0,0,0,0.7)] z-30">
+    <div className="text-[8px] font-mono uppercase tracking-widest text-[#8c7662]/70 border-b border-[#2e1a10] pb-0.5 w-full text-center">
+      ITEMS
+    </div>
+
+    {items.map((itemId, idx) => {
+      const item = itemId ? ALL_ITEMS[itemId] : null;
+      const isTargetingThis = itemTargetSourceSlot === idx;
+
+      return (
+        <button
+          key={idx}
+          onClick={() => handleUseItem(idx)}
+          disabled={phase !== 'PLAY' || !item}
+          title={item ? `${item.name}: ${item.description}` : 'Empty Slot'}
+          className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-sm border flex items-center justify-center text-lg outline-none transition-all duration-150 ${
+            item
+              ? isTargetingThis
+                ? 'border-red-500 bg-red-950/50 shadow-[0_0_12px_rgba(239,68,68,0.8)] scale-105 animate-pulse cursor-pointer'
+                : 'border-[#5a3822] bg-gradient-to-b from-[#241710] to-[#140d09] hover:border-amber-400 hover:scale-105 active:scale-95 shadow-[0_2px_5px_rgba(0,0,0,0.8)] cursor-pointer'
+              : 'border-[#261810]/40 bg-[#090604]/60 cursor-not-allowed opacity-30 shadow-inner'
+          }`}
+        >
+          {item ? (
+            <span>{item.emoji}</span>
+          ) : (
+            <span className="text-[#3a261a] text-xs font-mono">•</span>
+          )}
+        </button>
+      );
+    })}
+  </div>
+
+</div> {/* End FIXED FLANK wrapper */}
             </div>
           </div>    
         </div>
