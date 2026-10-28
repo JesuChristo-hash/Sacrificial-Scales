@@ -5672,9 +5672,6 @@ export default function App() {
         const enemyObstacleTarget = enemyRoll < 0.05 ? 2 : enemyRoll < 0.40 ? 1 : 0;
         const totalObstacles = playerObstacleTarget + enemyObstacleTarget;
 
-        // Remaining obstacles populate the player's board (capped at 4)
-        const playerObstacleTarget = Math.min(4, totalObstacles - enemyObstacleTarget);
-
         // Populate Player Obstacles
         const availablePlayerLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
         for (let i = 0; i < playerObstacleTarget; i++) {
