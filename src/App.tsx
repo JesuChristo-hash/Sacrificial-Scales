@@ -5659,20 +5659,18 @@ export default function App() {
         addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
       }
 
-      // Natural Encounter Architecture: 2 to 4 terrain obstacles across both boards
-      // Heavily weighted to the player's side; enemy side occasionally receives 1 (or rarely 2)
+      // Natural Encounter Architecture: Controlled terrain distribution
+      // Strictly caps player obstacles to a maximum of 1 so unsacrificable obstacles never brick the board
       if (!isBoss) {
         const nextPlayerBoard: (CardDef | null)[] = [null, null, null, null];
-        const totalObstacles = Math.floor(Math.random() * 3) + 2; // Always 2, 3, or 4
 
-        // Enemy receives 1 obstacle ~30% of the time, 2 obstacles ~5% of the time (if total >= 3), else 0
+        // Player receives at most 1 obstacle (60% chance of 1, 40% clean), leaving 3 open lanes
+        const playerObstacleTarget = Math.random() < 0.6 ? 1 : 0;
+        
+        // Enemy receives 1 obstacle 35% of the time, rarely 2 (5%), else 0
         const enemyRoll = Math.random();
-        let enemyObstacleTarget = 0;
-        if (enemyRoll < 0.05 && totalObstacles >= 3) {
-          enemyObstacleTarget = 2;
-        } else if (enemyRoll < 0.35 && totalObstacles >= 2) {
-          enemyObstacleTarget = 1;
-        }
+        const enemyObstacleTarget = enemyRoll < 0.05 ? 2 : enemyRoll < 0.40 ? 1 : 0;
+        const totalObstacles = playerObstacleTarget + enemyObstacleTarget;
 
         // Remaining obstacles populate the player's board (capped at 4)
         const playerObstacleTarget = Math.min(4, totalObstacles - enemyObstacleTarget);
