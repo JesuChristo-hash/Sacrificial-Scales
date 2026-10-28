@@ -99,6 +99,7 @@ export type ScreenState =
   | 'GAME_OVER'
   | 'EVENT_CROSSROADS'
   | 'EVENT_CAMPFIRE'
+  | 'EVENT_ITEMS'
   | 'EVENT_ALTAR'
   | 'EVENT_TOTEM_CARVING'
   | 'EVENT_COST_BARGAIN'
@@ -2422,6 +2423,39 @@ export default function App() {
   const [isTalismanPricked, setIsTalismanPricked] = useState<boolean>(false);
   const isCinematic = false;
 
+  // --- Item Restock Event State ---
+  const [itemChoices, setItemChoices] = useState<ItemId[]>([]);
+
+  const startItemEvent = () => {
+    const pool: ItemId[] = [
+      'magical_hat',
+      'bone_lords_horn',
+      'joker_stamp',
+      'large_matchbook',
+      'coin_purse',
+      'loaded_die',
+      'bronze_acorn'
+    ];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+    setItemChoices(shuffled);
+    setScreen('EVENT_ITEMS');
+  };
+
+  const handleSelectItem = (selectedId: ItemId) => {
+    const emptySlot = items.findIndex(slot => slot === null);
+    if (emptySlot !== -1) {
+      setItems(prev => {
+        const next = [...prev];
+        next[emptySlot] = selectedId;
+        return next;
+      });
+      addLog(`Acquired ${ALL_ITEMS[selectedId].name}.`);
+    } else {
+      addLog(`Satchel full. ${ALL_ITEMS[selectedId].name} left behind.`);
+    }
+    setScreen('EVENT_CROSSROADS');
+  };
+
   useEffect(() => {
     if (phase === 'PLAY') {
       setIsTalismanPricked(false);
@@ -2786,11 +2820,19 @@ export default function App() {
     let card: CardDef;
     if (type === 'sacrifice') {
       card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+      if (isAcornActive) {
+        card.attack = (card.attack || 0) + 1;
+        card.health = (card.health || 0) + 1;
+      }
       addLog("Drew a Squirrel.");
     } else {
       if (deck.length === 0) {
         addLog("Your deck is empty! A Squirrel approaches out of pity.");
         card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+        if (isAcornActive) {
+          card.attack = (card.attack || 0) + 1;
+          card.health = (card.health || 0) + 1;
+        }
       } else {
         const remaining = [...deck];
         const drawn = remaining.pop()!;
@@ -8009,7 +8051,49 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* =========================================================================
+          ITEM RESTOCK EVENT SCREEN
+         ========================================================================= */}
+      {screen === 'EVENT_ITEMS' && (
+        <div className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono">
+          <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-2">
+            Surplus Cache
+          </div>
+          <p className="text-xs text-neutral-400 mb-8">
+            Choose a relic to stow in your satchel:
+          </p>
 
+          <div className="flex gap-6 items-center justify-center max-w-xl">
+            {itemChoices.map(itemId => {
+              const def = ALL_ITEMS[itemId];
+              return (
+                <button
+                  key={itemId}
+                  onClick={() => handleSelectItem(itemId)}
+                  className="w-44 p-4 bg-[#140d09] border border-[#3e2316] hover:border-amber-400 rounded-sm flex flex-col items-center text-center transition-all duration-150 hover:scale-105 group cursor-pointer"
+                >
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                    {def.emoji}
+                  </div>
+                  <div className="text-xs font-bold text-amber-100 uppercase mb-2">
+                    {def.name}
+                  </div>
+                  <div className="text-[10px] text-neutral-400 leading-relaxed">
+                    {def.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setScreen('EVENT_CROSSROADS')}
+            className="mt-10 px-4 py-2 border border-[#3e2316] text-[#8c7662] hover:text-neutral-200 text-xs uppercase tracking-wider cursor-pointer"
+          >
+            Leave Empty-Handed
+          </button>
+        </div>
+      )}
       {/* =========================================================================
           CAMPFIRE EVENT SCREEN
          ========================================================================= */}
@@ -10068,11 +10152,20 @@ export default function App() {
                                const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
                                return (
                                  <div
-                                   key={`e-slot-${idx}`}
-                                    className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                      isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                                    }`}
-                                  >
+                                  key={`e-slot-${idx}`}
+                                  onClick={() => {
+                                    if (itemTargetMode) {
+                                      handleItemTargetLane(idx);
+                                    }
+                                  }}
+                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                    isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                  } ${
+                                    itemTargetMode && card
+                                      ? 'ring-2 ring-red-500/80 animate-pulse cursor-crosshair scale-[1.02]'
+                                      : ''
+                                  }`}
+                                >
                                     {(!card || isAttackingThisLane) && (
                                       <span className="absolute text-[10px] font-mono text-amber-900/30 select-none pointer-events-none">
                                         •
@@ -10648,6 +10741,80 @@ export default function App() {
         </div>
       )}
       </div>
+
+      {/* Loaded Die Deck Choice Modal */}
+      {dieModal && (
+        <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-xs font-mono select-none">
+          <div className="max-w-xs w-full bg-[#120c09] border border-[#5a3822] p-5 text-center shadow-2xl rounded-sm">
+            <div className="text-4xl mb-2">🎲 {dieModal.roll}</div>
+            <div className="text-amber-200 font-bold text-sm tracking-widest uppercase mb-1">Loaded Die Cast</div>
+            <p className="text-xs text-neutral-400 mb-4">
+              Choose which deck yields {dieModal.count} {dieModal.count === 1 ? 'card' : 'cards'}:
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  for (let i = 0; i < dieModal.count; i++) {
+                    handleDraw('sacrifice');
+                  }
+                  setDieModal(null);
+                }}
+                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
+              >
+                Squirrels ({dieModal.count})
+              </button>
+              <button
+                onClick={() => {
+                  for (let i = 0; i < dieModal.count; i++) {
+                    handleDraw('main');
+                  }
+                  setDieModal(null);
+                }}
+                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
+              >
+                Creatures ({dieModal.count})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loaded Die Deck Choice Modal */}
+      {dieModal && (
+        <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-xs font-mono select-none">
+          <div className="max-w-xs w-full bg-[#120c09] border border-[#5a3822] p-5 text-center shadow-2xl rounded-sm">
+            <div className="text-4xl mb-2">🎲 {dieModal.roll}</div>
+            <div className="text-amber-200 font-bold text-sm tracking-widest uppercase mb-1">Loaded Die Cast</div>
+            <p className="text-xs text-neutral-400 mb-4">
+              Choose which deck yields {dieModal.count} {dieModal.count === 1 ? 'card' : 'cards'}:
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  for (let i = 0; i < dieModal.count; i++) {
+                    (handleDraw as any)('sacrifice');
+                  }
+                  setDieModal(null);
+                }}
+                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
+              >
+                Squirrels ({dieModal.count})
+              </button>
+              <button
+                onClick={() => {
+                  for (let i = 0; i < dieModal.count; i++) {
+                    (handleDraw as any)('deck');
+                  }
+                  setDieModal(null);
+                }}
+                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
+              >
+                Creatures ({dieModal.count})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           SIGIL DETAIL MODAL
