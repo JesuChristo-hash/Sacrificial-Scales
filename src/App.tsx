@@ -2476,6 +2476,31 @@ export default function App() {
     addLog(`Extracted ${ALL_ITEMS[selectedId].name} for ${cost} oz of blood.`);
   };
 
+  const handleLeaveCache = () => {
+    const satchelFull = items.findIndex(s => s === null) === -1;
+    const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
+    const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
+
+    if (cannotBuyMore) {
+      // Draw exclusively from valid, collectible cards (exclude tokens and boss spawns)
+      const validPool = MAIN_DECK_POOL.filter(
+        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined
+      );
+      const candidates = validPool.length > 0 ? validPool : MAIN_DECK_POOL;
+      const rawChosen = candidates[Math.floor(Math.random() * candidates.length)];
+      const rewardCard = transformAmorphous(cloneCard(rawChosen, 0));
+
+      const nextDeck = [...deck, rewardCard];
+      setDeck(nextDeck);
+      triggerSfx('draw');
+      addLog(`Cache peddler yields a consolation: ${rewardCard.name} added to your deck.`);
+      startNextDuel(undefined, nextDeck);
+    } else {
+      addLog("Departed the Surplus Cache.");
+      startNextDuel();
+    }
+  };
+
   useEffect(() => {
     if (phase === 'PLAY') {
       setIsTalismanPricked(false);
@@ -8135,12 +8160,31 @@ export default function App() {
             )}
           </div>
 
-          <button
-            onClick={() => setScreen('EVENT_CROSSROADS')}
-            className="mt-10 px-5 py-2 border border-[#3e2316] text-[#8c7662] hover:text-neutral-200 text-xs uppercase tracking-wider cursor-pointer transition-colors"
-          >
-            Leave Cache
-          </button>
+          {(() => {
+            const satchelFull = items.findIndex(s => s === null) === -1;
+            const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
+            const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
+
+            return (
+              <div className="flex flex-col items-center mt-10">
+                <button
+                  onClick={handleLeaveCache}
+                  className={`px-6 py-2.5 border rounded-sm text-xs uppercase tracking-wider cursor-pointer transition-all ${
+                    cannotBuyMore
+                      ? 'border-amber-700/80 bg-[#1c120b] text-amber-200 hover:border-amber-500 hover:text-white shadow-[0_0_12px_rgba(217,119,6,0.2)] hover:scale-[1.02]'
+                      : 'border-[#3e2316] text-[#8c7662] hover:text-neutral-200'
+                  }`}
+                >
+                  {cannotBuyMore ? 'Claim Card & Venture Forth' : 'Leave Cache'}
+                </button>
+                {cannotBuyMore && (
+                  <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
+                    Cannot barter further — the peddler offers a field card before the path continues.
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
       {/* =========================================================================
