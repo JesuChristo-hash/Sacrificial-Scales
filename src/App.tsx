@@ -2434,6 +2434,8 @@ export default function App() {
     totemPieces: any[];
     activeTotem: { head: any; body: any };
     currentStageName: string;
+    startingBones?: number;
+    ouroborosBuffs?: number;
     savedAt: number;
   }
 
@@ -2473,6 +2475,8 @@ export default function App() {
           totemPieces,
           activeTotem,
           currentStageName,
+          startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
+          ouroborosBuffs,
           savedAt: Date.now(),
         };
         localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
@@ -2481,7 +2485,7 @@ export default function App() {
         console.warn("Auto-save failed:", e);
       }
     }
-  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, screen]);
+  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, startingBones, ouroborosBuffs, screen]);
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
@@ -5459,6 +5463,14 @@ export default function App() {
       if (data.currentStageName) {
         setCurrentStageName(data.currentStageName);
       }
+      const restoredBones = data.startingBones ?? 0;
+      setStartingBones(restoredBones);
+      if (typeof startingBonesRef !== 'undefined') {
+        startingBonesRef.current = restoredBones;
+      }
+      if (data.ouroborosBuffs !== undefined) {
+        setOuroborosBuffs(data.ouroborosBuffs);
+      }
 
       setShowContinueModal(false);
       triggerSfx('play');
@@ -7971,6 +7983,8 @@ export default function App() {
                         totemPieces,
                         activeTotem,
                         currentStageName,
+                        startingBones: startingBonesRef.current !== undefined ? startingBonesRef.current : startingBones,
+                        ouroborosBuffs,
                         savedAt: Date.now(),
                       }));
                       setSavedRunExists(true);
