@@ -2435,8 +2435,10 @@ export default function App() {
   };
 
   const [itemChoices, setItemChoices] = useState<ItemId[]>([]);
+  const [cacheConsolationCard, setCacheConsolationCard] = useState<CardDef | null>(null);
 
   const startItemEvent = () => {
+    setCacheConsolationCard(null);
     const pool: ItemId[] = [
       'magical_hat',
       'bone_lords_horn',
@@ -2482,23 +2484,37 @@ export default function App() {
     const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
 
     if (cannotBuyMore) {
-      // Draw exclusively from valid, collectible cards (exclude tokens and boss spawns)
+      // Filter exclusively for collectible field cards (no tokens, boss obstacles, or unsacrificables)
       const validPool = MAIN_DECK_POOL.filter(
-        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined
+        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined && !c.isTerrain
       );
       const candidates = validPool.length > 0 ? validPool : MAIN_DECK_POOL;
       const rawChosen = candidates[Math.floor(Math.random() * candidates.length)];
       const rewardCard = transformAmorphous(cloneCard(rawChosen, 0));
 
-      const nextDeck = [...deck, rewardCard];
-      setDeck(nextDeck);
       triggerSfx('draw');
-      addLog(`Cache peddler yields a consolation: ${rewardCard.name} added to your deck.`);
-      startNextDuel(undefined, nextDeck);
+      setCacheConsolationCard(rewardCard);
+      addLog(`Peddler presents a token for the road: ${rewardCard.name}.`);
     } else {
       addLog("Departed the Surplus Cache.");
       startNextDuel();
     }
+  };
+
+  const handleConfirmConsolation = () => {
+    if (!cacheConsolationCard) return;
+
+    // Append strictly to masterDeck to preserve all prior deck upgrades
+    const updatedMasterDeck = [...masterDeck, cacheConsolationCard];
+    setMasterDeck(updatedMasterDeck);
+    if (typeof masterDeckRef !== 'undefined' && masterDeckRef?.current) {
+      masterDeckRef.current = updatedMasterDeck;
+    }
+
+    triggerSfx('play');
+    addLog(`${cacheConsolationCard.name} safely stowed into your deck.`);
+    setCacheConsolationCard(null);
+    startNextDuel(undefined, updatedMasterDeck);
   };
 
   useEffect(() => {
@@ -8098,93 +8114,174 @@ export default function App() {
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (
         <div className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono">
-          <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-1">
-            Surplus Cache
-          </div>
-          <p className="text-xs text-neutral-400 mb-3">
-            Exchange your overkill blood harvest for field relics:
-          </p>
-
-          {/* Blood Bank Balance Indicator */}
-          <div className="flex items-center gap-2 mb-8 px-4 py-1.5 bg-[#140e0b] border border-[#3a2215] rounded-sm shadow-inner">
-            <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">Blood Bank:</span>
-            <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
-              {totalOverkillDamage}
-            </span>
-            <span className="text-[10px] uppercase font-bold text-amber-800">OZ</span>
-          </div>
-
-          <div className="flex gap-6 items-center justify-center max-w-xl">
-            {itemChoices.length === 0 ? (
-              <div className="text-xs text-neutral-500 italic py-8">
-                The cache shelves have been emptied.
+          {cacheConsolationCard ? (
+            /* Consolation Card Showcase Modal */
+            <div className="flex flex-col items-center justify-center max-w-md w-full text-center animate-menu-fade-in">
+              <div className="text-amber-600/80 font-mono text-[10px] uppercase tracking-[0.25em] mb-1">
+                Barter Exhausted
               </div>
-            ) : (
-              itemChoices.map(itemId => {
-                const def = ALL_ITEMS[itemId];
-                const cost = ITEM_COSTS[itemId] ?? 3;
-                const satchelFull = items.findIndex(s => s === null) === -1;
-                const canAfford = totalOverkillDamage >= cost && !satchelFull;
+              <h3 className="text-xl font-['Cinzel',_serif] font-bold text-amber-100 uppercase tracking-widest mb-1 drop-shadow-md">
+                Peddler's Token
+              </h3>
+              <p className="text-xs text-stone-400 mb-6 font-mono">
+                Unable to trade further, the peddler slides a card across the wood:
+              </p>
 
-                return (
-                  <button
-                    key={itemId}
-                    disabled={!canAfford}
-                    onClick={() => handleSelectItem(itemId)}
-                    className={`w-44 p-4 border rounded-sm flex flex-col items-center text-center transition-all duration-150 relative ${
-                      canAfford
-                        ? 'bg-[#140d09] border-[#3e2316] hover:border-amber-400 hover:scale-105 group cursor-pointer'
-                        : 'bg-[#0d0907] border-[#20150f] opacity-45 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                      {def.emoji}
-                    </div>
-                    <div className="text-xs font-bold text-amber-100 uppercase mb-2">
-                      {def.name}
-                    </div>
-                    <div className="text-[10px] text-neutral-400 leading-relaxed mb-4">
-                      {def.description}
-                    </div>
-
-                    <div className={`mt-auto px-2.5 py-1 rounded-xs border text-[11px] font-bold tracking-wider ${
-                      totalOverkillDamage >= cost
-                        ? 'border-red-900/80 bg-red-950/40 text-red-300'
-                        : 'border-neutral-800 bg-neutral-900/60 text-neutral-600'
-                    }`}>
-                      🩸 {cost} OZ
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {(() => {
-            const satchelFull = items.findIndex(s => s === null) === -1;
-            const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
-            const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
-
-            return (
-              <div className="flex flex-col items-center mt-10">
-                <button
-                  onClick={handleLeaveCache}
-                  className={`px-6 py-2.5 border rounded-sm text-xs uppercase tracking-wider cursor-pointer transition-all ${
-                    cannotBuyMore
-                      ? 'border-amber-700/80 bg-[#1c120b] text-amber-200 hover:border-amber-500 hover:text-white shadow-[0_0_12px_rgba(217,119,6,0.2)] hover:scale-[1.02]'
-                      : 'border-[#3e2316] text-[#8c7662] hover:text-neutral-200'
-                  }`}
-                >
-                  {cannotBuyMore ? 'Claim Card & Venture Forth' : 'Leave Cache'}
-                </button>
-                {cannotBuyMore && (
-                  <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
-                    Cannot barter further — the peddler offers a field card before the path continues.
+              {/* Inscribed Card Plaque */}
+              <div className="relative w-44 h-64 bg-[#dfd3bc] border-4 border-[#2b1f17] rounded-md shadow-[0_16px_40px_rgba(0,0,0,0.95),inset_0_0_24px_rgba(140,103,71,0.4)] flex flex-col justify-between p-3 select-none text-[#1a120b] font-mono transform hover:scale-[1.03] transition-transform duration-200">
+                {/* Header: Name and Cost */}
+                <div className="flex justify-between items-start border-b border-[#8c6747]/40 pb-1.5">
+                  <span className="font-['Cinzel',_serif] font-bold text-xs leading-tight tracking-wider text-[#1a120b] uppercase max-w-[105px] text-left">
+                    {cacheConsolationCard.name}
                   </span>
+                  <div className="flex items-center gap-0.5 text-[11px] font-bold text-red-900">
+                    {cacheConsolationCard.cost !== undefined && cacheConsolationCard.cost > 0 && (
+                      <span>{'🩸'.repeat(cacheConsolationCard.cost)}</span>
+                    )}
+                    {(cacheConsolationCard as any).boneCost !== undefined && (cacheConsolationCard as any).boneCost > 0 && (
+                      <span className="text-[#3d2e24]">{(cacheConsolationCard as any).boneCost}🦴</span>
+                    )}
+                    {(!cacheConsolationCard.cost && !(cacheConsolationCard as any).boneCost) && (
+                      <span className="text-[10px] text-stone-600 uppercase font-sans">Free</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Art / Icon */}
+                <div className="flex-1 flex flex-col items-center justify-center my-2 border border-dashed border-[#8c6747]/30 bg-[#c8b89e]/30 rounded-sm p-2">
+                  <div className="text-4xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] mb-1">
+                    {(cacheConsolationCard as any).emoji || '🐾'}
+                  </div>
+                  {cacheConsolationCard.sigils && cacheConsolationCard.sigils.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-center mt-1">
+                      {cacheConsolationCard.sigils.map((s: any, idx: number) => {
+                        const sigName = typeof s === 'string' ? s : s?.name || '';
+                        return (
+                          <span
+                            key={idx}
+                            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#2b1f17]/10 border border-[#8c6747]/40 rounded-xs text-[#2b1f17]"
+                          >
+                            {sigName}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer: Attack and Health */}
+                <div className="flex justify-between items-center border-t border-[#8c6747]/40 pt-1 px-1">
+                  <div className="flex items-center gap-1 font-['Cinzel',_serif] font-black text-sm text-[#1a120b]">
+                    <span>{cacheConsolationCard.attack ?? 0}</span>
+                    <span className="text-[10px] text-[#8c6747]">⚔</span>
+                  </div>
+                  <div className="flex items-center gap-1 font-['Cinzel',_serif] font-black text-sm text-[#7f1d1d]">
+                    <span>{cacheConsolationCard.health ?? 0}</span>
+                    <span className="text-[10px] text-red-800">♥</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accept & Advance Button */}
+              <button
+                onClick={handleConfirmConsolation}
+                className="mt-8 px-7 py-2.5 bg-[#1a100b] hover:bg-[#2b1910] active:bg-[#120a06] border border-amber-600/80 hover:border-amber-400 text-amber-200 hover:text-white rounded-sm font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.8)] transition-all"
+              >
+                Claim Card & Press Forward
+              </button>
+            </div>
+          ) : (
+            /* Standard Shelf Display */
+            <>
+              <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-1">
+                Surplus Cache
+              </div>
+              <p className="text-xs text-neutral-400 mb-3">
+                Exchange your overkill blood harvest for field relics:
+              </p>
+
+              {/* Blood Bank Balance Indicator */}
+              <div className="flex items-center gap-2 mb-8 px-4 py-1.5 bg-[#140e0b] border border-[#3a2215] rounded-sm shadow-inner">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">Blood Bank:</span>
+                <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
+                  {totalOverkillDamage}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-amber-800">OZ</span>
+              </div>
+
+              <div className="flex gap-6 items-center justify-center max-w-xl">
+                {itemChoices.length === 0 ? (
+                  <div className="text-xs text-neutral-500 italic py-8">
+                    The cache shelves have been emptied.
+                  </div>
+                ) : (
+                  itemChoices.map(itemId => {
+                    const def = ALL_ITEMS[itemId];
+                    const cost = ITEM_COSTS[itemId] ?? 3;
+                    const satchelFull = items.findIndex(s => s === null) === -1;
+                    const canAfford = totalOverkillDamage >= cost && !satchelFull;
+
+                    return (
+                      <button
+                        key={itemId}
+                        disabled={!canAfford}
+                        onClick={() => handleSelectItem(itemId)}
+                        className={`w-44 p-4 border rounded-sm flex flex-col items-center text-center transition-all duration-150 relative ${
+                          canAfford
+                            ? 'bg-[#140d09] border-[#3e2316] hover:border-amber-400 hover:scale-105 group cursor-pointer'
+                            : 'bg-[#0d0907] border-[#20150f] opacity-45 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                          {def.emoji}
+                        </div>
+                        <div className="text-xs font-bold text-amber-100 uppercase mb-2">
+                          {def.name}
+                        </div>
+                        <div className="text-[10px] text-neutral-400 leading-relaxed mb-4">
+                          {def.description}
+                        </div>
+
+                        <div className={`mt-auto px-2.5 py-1 rounded-xs border text-[11px] font-bold tracking-wider ${
+                          totalOverkillDamage >= cost
+                            ? 'border-red-900/80 bg-red-950/40 text-red-300'
+                            : 'border-neutral-800 bg-neutral-900/60 text-neutral-600'
+                        }`}>
+                          🩸 {cost} OZ
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
-            );
-          })()}
+
+              {(() => {
+                const satchelFull = items.findIndex(s => s === null) === -1;
+                const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
+                const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
+
+                return (
+                  <div className="flex flex-col items-center mt-10">
+                    <button
+                      onClick={handleLeaveCache}
+                      className={`px-6 py-2.5 border rounded-sm text-xs uppercase tracking-wider cursor-pointer transition-all ${
+                        cannotBuyMore
+                          ? 'border-amber-700/80 bg-[#1c120b] text-amber-200 hover:border-amber-500 hover:text-white shadow-[0_0_12px_rgba(217,119,6,0.2)] hover:scale-[1.02]'
+                          : 'border-[#3e2316] text-[#8c7662] hover:text-neutral-200'
+                      }`}
+                    >
+                      {cannotBuyMore ? 'Claim Card & Venture Forth' : 'Leave Cache'}
+                    </button>
+                    {cannotBuyMore && (
+                      <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
+                        Cannot barter further — peddler offers a token card before the duel.
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
       )}
       {/* =========================================================================
