@@ -5634,13 +5634,60 @@ export default function App() {
         return rawAtk + wallTax + touchOfDeathTax;
       };
 
-      const availableLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+      // 1. Obstacle generation runs FIRST so the AI can perceive board blockages
+      const nextPlayerBoard: (CardDef | null)[] = [null, null, null, null];
+      let playerObstacleTarget = 0;
+      let enemyObstacleTarget = 0;
+
+      // Obstacles are an occasional encounter condition (30% chance in regular battles), not a constant
+      const rollsTerrainEncounter = !isBoss && Math.random() < 0.30;
+      if (rollsTerrainEncounter) {
+        // Exactly 1 obstacle spawns total across the battlefield: 65% player flank, 35% enemy frontline
+        if (Math.random() < 0.65) {
+          playerObstacleTarget = 1;
+          const pLane = Math.floor(Math.random() * 4);
+          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          nextPlayerBoard[pLane] = {
+            ...cloneCard(terrainCard),
+            id: `terrain-player-${Date.now()}-${pLane}`
+          };
+        } else {
+          enemyObstacleTarget = 1;
+          const eLane = Math.floor(Math.random() * 4);
+          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
+          initBoard[eLane] = {
+            ...cloneCard(terrainCard),
+            id: `terrain-enemy-${Date.now()}-${eLane}`
+          };
+        }
+
+        const summary = playerObstacleTarget > 0 ? '1 on your side' : "1 on opponent's side";
+        addLog(`The wilderness encroaches: an obstacle has formed (${summary}).`);
+      }
+
+      if (!isBoss) {
+        setPlayerBoard(nextPlayerBoard);
+      } else if (bossType !== 'Zealot') {
+        setPlayerBoard([null, null, null, null]);
+      }
+
+      // 2. Intelligent Backrow Lane Selection:
+      // - NEVER queue a creature behind an enemy frontline obstacle (it can never advance)
+      // - Prioritize open attack lanes over lanes directly facing a player tree/wall
+      const openFrontlineLanes = [0, 1, 2, 3].filter(l => initBoard[l] === null);
+      const prioritizedLanes = [...openFrontlineLanes].sort((a, b) => {
+        const aBlocked = nextPlayerBoard[a] !== null ? 1 : 0;
+        const bBlocked = nextPlayerBoard[b] !== null ? 1 : 0;
+        if (aBlocked !== bBlocked) return aBlocked - bBlocked; // Clear player lanes come first
+        return Math.random() - 0.5;
+      });
+
       let currentBackRowThreat = 0;
       let playedCount = 0;
 
-      for (let i = 0; i < initialCount; i++) {
+      for (let i = 0; i < Math.min(initialCount, prioritizedLanes.length); i++) {
         if (playedCount >= maxRegularCards) break;
-        const lane = availableLanes[i];
+        const lane = prioritizedLanes[i];
         const threatRemaining = maxOpeningThreat - currentBackRowThreat;
         if (threatRemaining <= 0) break;
 
@@ -5654,60 +5701,12 @@ export default function App() {
       }
 
       enemyCardsPlayedRef.current = playedCount;
-        setEnemyCardsPlayed(playedCount);
-        setEnemyWavesLeft(2);
-        addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
-      }
+      setEnemyCardsPlayed(playedCount);
+      setEnemyWavesLeft(2);
+      addLog(`Encounter ${encounter} started [Tier ${difficultyTier}] (Enemy card quota: ${maxRegularCards}). Prepare your defenses.`);
+    }
 
-      // Natural Encounter Architecture: Controlled terrain distribution
-      // Strictly caps player obstacles to a maximum of 1 so unsacrificable obstacles never brick the board
-      if (!isBoss) {
-        const nextPlayerBoard: (CardDef | null)[] = [null, null, null, null];
-
-        // Player receives at most 1 obstacle (60% chance of 1, 40% clean), leaving 3 open lanes
-        const playerObstacleTarget = Math.random() < 0.6 ? 1 : 0;
-        
-        // Enemy receives 1 obstacle 35% of the time, rarely 2 (5%), else 0
-        const enemyRoll = Math.random();
-        const enemyObstacleTarget = enemyRoll < 0.05 ? 2 : enemyRoll < 0.40 ? 1 : 0;
-        const totalObstacles = playerObstacleTarget + enemyObstacleTarget;
-
-        // Populate Player Obstacles
-        const availablePlayerLanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < playerObstacleTarget; i++) {
-          const lane = availablePlayerLanes[i];
-          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
-          nextPlayerBoard[lane] = {
-            ...cloneCard(terrainCard),
-            id: `terrain-player-${Date.now()}-${lane}`
-          };
-        }
-
-        // Populate Enemy Obstacles in open frontline slots
-        const availableEnemyLanes = [0, 1, 2, 3]
-          .filter(l => initBoard[l] === null)
-          .sort(() => Math.random() - 0.5);
-        for (let i = 0; i < Math.min(enemyObstacleTarget, availableEnemyLanes.length); i++) {
-          const lane = availableEnemyLanes[i];
-          const terrainCard = Math.random() < 0.6 ? CARD_FELLED_TREE : CARD_STONE_WALL;
-          initBoard[lane] = {
-            ...cloneCard(terrainCard),
-            id: `terrain-enemy-${Date.now()}-${lane}`
-          };
-        }
-
-        setPlayerBoard(nextPlayerBoard);
-
-        const summary = `${playerObstacleTarget} on your side${enemyObstacleTarget > 0 ? `, ${enemyObstacleTarget} on opponent's side` : ''}`;
-        addLog(`The wilderness encroaches: ${totalObstacles} obstacles have formed (${summary}).`);
-      } else {
-        // Boss encounters: ensure player board starts clean unless boss rules dictate otherwise
-        if (bossType !== 'Zealot') {
-          setPlayerBoard([null, null, null, null]);
-        }
-      }
-
-      setEnemyBoard(initBoard);
+    setEnemyBoard(initBoard);
     setEnemyQueue(initQueue);
     // Fair Hand Draw: Prioritize honest foundation cards before multi-strike sweepers
     const initialHand: CardDef[] = [currentTotem ? applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), currentTotem) : cloneCard(TOKEN_SQUIRREL, ouroborosBuffs)];
