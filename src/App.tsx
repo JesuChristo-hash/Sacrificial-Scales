@@ -2428,6 +2428,7 @@ export default function App() {
     magical_hat: 2,
     coin_purse: 2,
     bronze_acorn: 3,
+    bronze_crucifix: 3,
     bone_lords_horn: 3,
     loaded_die: 3,
     joker_stamp: 4,
@@ -2486,7 +2487,7 @@ export default function App() {
     if (cannotBuyMore) {
       // Filter exclusively for collectible field cards (no tokens, boss obstacles, or unsacrificables)
       const validPool = MAIN_DECK_POOL.filter(
-        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined && !c.isTerrain
+        c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined && !(c as any).isTerrain && c.name !== 'Stone Wall' && c.name !== 'Felled Tree'
       );
       const candidates = validPool.length > 0 ? validPool : MAIN_DECK_POOL;
       const rawChosen = candidates[Math.floor(Math.random() * candidates.length)];
