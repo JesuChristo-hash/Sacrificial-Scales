@@ -7431,15 +7431,16 @@ export default function App() {
           <div className="relative z-20 flex flex-col items-center justify-center text-center max-w-4xl w-full mx-auto my-auto">
   
   {/* Direct, Frame-less High-Fidelity ASCII Title Display */}
-  <div className="flex flex-col items-center justify-center w-full px-2 overflow-hidden">
+  <div className="flex flex-col items-center justify-center w-full px-2 overflow-visible">
   {/* THREAD */}
   <pre 
     style={{ 
       fontFamily: '"Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92' 
+      lineHeight: '0.92',
+      textShadow: '0 0 14px rgba(239, 68, 68, 0.85), 0 0 30px rgba(185, 28, 28, 0.5)'
     }}
-    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal"
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-4 sm:p-6 overflow-visible"
   >
 {`    ███        ▄█    █▄       ▄████████    ▄████████    ▄████████ ████████▄  
 ▀█████████▄   ███    ███     ███    ███   ███    ███   ███    ███ ███   ▀███ 
@@ -7457,9 +7458,10 @@ export default function App() {
     style={{ 
       fontFamily: '"Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92' 
+      lineHeight: '0.92',
+      textShadow: '0 0 14px rgba(239, 68, 68, 0.85), 0 0 30px rgba(185, 28, 28, 0.5)'
     }}
-    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal my-1 sm:my-2"
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-2 sm:p-4 overflow-visible my-0"
   >
 {`    ▄▄▄▄     
    ██  ██    
@@ -7474,9 +7476,10 @@ export default function App() {
     style={{ 
       fontFamily: '"Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92' 
+      lineHeight: '0.92',
+      textShadow: '0 0 14px rgba(220, 38, 38, 0.85), 0 0 30px rgba(153, 27, 27, 0.5)'
     }}
-    className="text-red-600 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal"
+    className="text-red-600 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-4 sm:p-6 overflow-visible"
   >
 {`  ▀█████████▄   ▄██████▄  ███▄▄▄▄      ▄████████    ▄████████ 
     ███    ███ ███    ███ ███▀▀▀██▄   ███    ███   ███    ███ 
@@ -7577,15 +7580,16 @@ export default function App() {
                   setScreen('DECK_SELECT');
                 }
               }}
-              className="group mt-8 cursor-pointer bg-transparent border-0 p-0 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center"
+              className="group mt-4 sm:mt-6 cursor-pointer bg-transparent border-0 p-2 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center overflow-visible"
             >
               <pre 
                 style={{ 
-                  fontFamily: '"Courier New", Courier, monospace',
+                  fontFamily: '"Courier New", Courier, monospace', 
                   letterSpacing: '0px',
-                  lineHeight: '0.92'
+                  lineHeight: '0.92',
+                  textShadow: '0 0 12px rgba(239, 68, 68, 0.85), 0 0 24px rgba(220, 38, 38, 0.5)'
                 }} 
-                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5px,0.85vw,8px)] whitespace-pre select-none drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]"
+                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5px,0.85vw,8px)] whitespace-pre select-none p-3 overflow-visible"
               >
 {`          ▀█████████▄   ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█     ███     ███    █▄     ▄████████  ▄█       
            ███    ███  ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███ ▀█████████▄ ███    ███   ███    ███ ███       
