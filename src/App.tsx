@@ -7956,13 +7956,55 @@ export default function App() {
                 RESUME RITUAL
               </button>
 
+              {/* Postpone Ritual (Save & Return to Title) */}
               <button
                 onClick={() => {
+                  if (masterDeck && masterDeck.length > 0) {
+                    try {
+                      localStorage.setItem(RUN_SAVE_KEY, JSON.stringify({
+                        masterDeck,
+                        items,
+                        totalOverkillDamage,
+                        stage,
+                        level,
+                        duelsCompleted,
+                        totemPieces,
+                        activeTotem,
+                        currentStageName,
+                        savedAt: Date.now(),
+                      }));
+                      setSavedRunExists(true);
+                    } catch (e) {
+                      console.warn("Postpone save failed:", e);
+                    }
+                  }
+                  try {
+                    ChiptuneAudio.playAmbient();
+                  } catch (e) {
+                    console.warn("Audio switch blocked:", e);
+                  }
+                  setShowPauseMenu(false);
+                  setScreen('SPLASH');
+                }}
+                className="w-full py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-amber-900/60 hover:border-amber-700/80 rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-amber-300/90 hover:text-amber-200 cursor-pointer text-center"
+              >
+                POSTPONE RITUAL
+              </button>
+
+              {/* End Ritual (Surrender & Wipe Save) */}
+              <button
+                onClick={() => {
+                  clearRunSave();
                   setShowPauseMenu(false);
                   triggerSfx('defeat');
+                  setBossState(prev => ({
+                    ...prev,
+                    isRitualComplete: false,
+                    ritualEndedVoluntarily: true,
+                  }));
                   setScreen('GAME_OVER');
                 }}
-                className="w-full py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#3b1814] rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-red-400/80 hover:text-red-300 cursor-pointer text-center"
+                className="w-full py-2 bg-[#181310] hover:bg-[#231b16] active:bg-[#120e0b] border border-[#3b1814] hover:border-red-900/80 rounded-sm shadow-[0_2px_0_#0a0807,inset_0_1px_0_rgba(255,255,255,0.06)] active:translate-y-[1px] active:shadow-none transition-all duration-75 font-['Cinzel',_serif] font-bold text-[11px] uppercase tracking-widest text-red-500/80 hover:text-red-400 cursor-pointer text-center"
               >
                 END RITUAL
               </button>
