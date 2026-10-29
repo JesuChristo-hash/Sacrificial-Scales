@@ -7431,9 +7431,16 @@ export default function App() {
           <div className="relative z-20 flex flex-col items-center justify-center text-center max-w-4xl w-full mx-auto my-auto">
   
   {/* Direct, Frame-less High-Fidelity ASCII Title Display */}
-  <div className="flex flex-col items-center justify-center w-full px-2">
+  <div className="flex flex-col items-center justify-center w-full px-2 overflow-hidden">
   {/* THREAD */}
-  <pre className="text-red-500 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal">
+  <pre 
+    style={{ 
+      fontFamily: '"Courier New", Courier, monospace', 
+      letterSpacing: '0px', 
+      lineHeight: '0.92' 
+    }}
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal"
+  >
 {`    ███        ▄█    █▄       ▄████████    ▄████████    ▄████████ ████████▄  
 ▀█████████▄   ███    ███     ███    ███   ███    ███   ███    ███ ███   ▀███ 
    ▀███▀▀██   ███    ███     ███    ███   ███    █▀    ███    ███ ███    ███ 
@@ -7446,7 +7453,14 @@ export default function App() {
   </pre>
 
   {/* & (Centered) */}
-  <pre className="text-red-500 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal my-2">
+  <pre 
+    style={{ 
+      fontFamily: '"Courier New", Courier, monospace', 
+      letterSpacing: '0px', 
+      lineHeight: '0.92' 
+    }}
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal my-1 sm:my-2"
+  >
 {`    ▄▄▄▄     
    ██  ██    
    ▀██▄█▀    
@@ -7456,7 +7470,14 @@ export default function App() {
   </pre>
 
   {/* BONES (Centered) */}
-  <pre className="text-red-600 font-bold animate-occult-pulse text-[5px] sm:text-[7.5px] md:text-[9.5px] lg:text-[11px] whitespace-pre font-mono leading-none inline-block text-left mx-auto select-none tracking-normal">
+  <pre 
+    style={{ 
+      fontFamily: '"Courier New", Courier, monospace', 
+      letterSpacing: '0px', 
+      lineHeight: '0.92' 
+    }}
+    className="text-red-600 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal"
+  >
 {`  ▀█████████▄   ▄██████▄  ███▄▄▄▄      ▄████████    ▄████████ 
     ███    ███ ███    ███ ███▀▀▀██▄   ███    ███   ███    ███ 
     ███    ███ ███    ███ ███   ███   ███    █▀    ███    █▀  
@@ -7561,9 +7582,10 @@ export default function App() {
               <pre 
                 style={{ 
                   fontFamily: '"Courier New", Courier, monospace',
-                  letterSpacing: '0px'
+                  letterSpacing: '0px',
+                  lineHeight: '0.92'
                 }} 
-                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[7.5px] whitespace-pre leading-none select-none drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]"
+                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5px,0.85vw,8px)] whitespace-pre select-none drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]"
               >
 {`          ▀█████████▄   ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█     ███     ███    █▄     ▄████████  ▄█       
            ███    ███  ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███ ▀█████████▄ ███    ███   ███    ███ ███       
@@ -10101,7 +10123,8 @@ export default function App() {
                         </button>
 
                       <pre
-                        className={`font-mono text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 transition-all duration-200 text-center ${
+                        style={{ fontFamily: '"Courier New", Courier, monospace', letterSpacing: '0px' }}
+                        className={`text-[5px] leading-[4.5px] whitespace-pre select-none pointer-events-none origin-top mt-2 transition-all duration-200 text-center ${
                           isTalismanPricked
                             ? 'scale-[0.45] text-red-400 font-bold drop-shadow-[0_0_8px_rgba(239,68,68,0.95)]'
                             : phase === 'PLAY'
