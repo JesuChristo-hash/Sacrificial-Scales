@@ -2423,7 +2423,17 @@ export default function App() {
   const [isTalismanPricked, setIsTalismanPricked] = useState<boolean>(false);
   const isCinematic = false;
 
-  // --- Item Restock Event State ---
+  // --- Item Restock & Blood Bank Pricing ---
+  const ITEM_COSTS: Record<ItemId, number> = {
+    magical_hat: 2,
+    coin_purse: 2,
+    bronze_acorn: 3,
+    bone_lords_horn: 3,
+    loaded_die: 3,
+    joker_stamp: 4,
+    large_matchbook: 4,
+  };
+
   const [itemChoices, setItemChoices] = useState<ItemId[]>([]);
 
   const startItemEvent = () => {
@@ -2442,18 +2452,28 @@ export default function App() {
   };
 
   const handleSelectItem = (selectedId: ItemId) => {
+    const cost = ITEM_COSTS[selectedId] ?? 3;
     const emptySlot = items.findIndex(slot => slot === null);
-    if (emptySlot !== -1) {
-      setItems(prev => {
-        const next = [...prev];
-        next[emptySlot] = selectedId;
-        return next;
-      });
-      addLog(`Acquired ${ALL_ITEMS[selectedId].name}.`);
-    } else {
-      addLog(`Satchel full. ${ALL_ITEMS[selectedId].name} left behind.`);
+
+    if (emptySlot === -1) {
+      addLog("Your satchel is full. Consume or discard an item first.");
+      return;
     }
-    setScreen('EVENT_CROSSROADS');
+
+    if (totalOverkillDamage < cost) {
+      addLog(`Not enough blood. ${ALL_ITEMS[selectedId].name} costs ${cost} oz.`);
+      return;
+    }
+
+    setTotalOverkillDamage(prev => Math.max(0, prev - cost));
+    setItems(prev => {
+      const next = [...prev];
+      next[emptySlot] = selectedId;
+      return next;
+    });
+    setItemChoices(prev => prev.filter(id => id !== selectedId));
+    triggerSfx('draw');
+    addLog(`Extracted ${ALL_ITEMS[selectedId].name} for ${cost} oz of blood.`);
   };
 
   useEffect(() => {
@@ -5296,7 +5316,7 @@ export default function App() {
         if (isBossMatch) {
           initCardChoice();
         } else if (nextDuels % 2 !== 0) {
-          const allEvents = ['campfire', 'altar', 'carving', 'cost', 'bonelord', 'mycologist', 'goobert', 'cave', 'choice', 'totem'];
+          const allEvents = ['campfire', 'altar', 'carving', 'cost', 'bonelord', 'mycologist', 'goobert', 'cave', 'choice', 'totem', 'items'];
           const shuffled = [...allEvents].sort(() => Math.random() - 0.5).slice(0, 3);
           setCrossroadsOptions(shuffled);
           setScreen('EVENT_CROSSROADS');
@@ -6547,6 +6567,7 @@ export default function App() {
     } else if (type === 'boss-woodcarver') {
       startNextDuel('The Weaver');
     }
+    else if (type === 'items') startItemEvent();
     else if (type === 'campfire') initCampfire();
     else if (type === 'altar') initAltar();
     else if (type === 'carving') initTotemCarving();
@@ -8010,6 +8031,7 @@ export default function App() {
                   'cave': { title: 'The Steeple', desc: 'The Zealot tests if your Creatures are worthy', icon: <Eye className="w-5 h-5 text-stone-300 filter sepia-[0.4]" /> },
                   'choice': { title: 'Wild Creatures', desc: 'A group of Creatures approach from the darkness', icon: <HelpCircle className="w-5 h-5 text-amber-300 filter sepia-[0.4]" /> },
                   'totem': { title: 'The Weaver', desc: 'Assemble an Effigy from a Tribe Patch and Crest', icon: <Wrench className="w-5 h-5 text-amber-400 filter sepia-[0.4]" /> },
+                  'items': { title: 'Surplus Cache', desc: 'Barter your overkill blood harvest for arcane relics', icon: <span className="text-base select-none">🎒</span> },
                 };
                 const d = details[eId] || { title: 'Unknown', desc: 'The path ahead lies in darkness.', icon: <Sparkles className="w-5 h-5" /> };
 
@@ -8017,7 +8039,8 @@ export default function App() {
                   <div
                     key={eId}
                     onClick={() => {
-                      if (eId === 'campfire') initCampfire();
+                      if (eId === 'items') startItemEvent();
+                      else if (eId === 'campfire') initCampfire();
                       else if (eId === 'altar') initAltar();
                       else if (eId === 'carving') initTotemCarving();
                       else if (eId === 'cost') initCostBargain();
@@ -8046,45 +8069,77 @@ export default function App() {
         </div>
       )}
       {/* =========================================================================
-          ITEM RESTOCK EVENT SCREEN
+          ITEM RESTOCK EVENT SCREEN (SURPLUS CACHE)
          ========================================================================= */}
       {screen === 'EVENT_ITEMS' && (
         <div className="fixed inset-0 bg-[#070504] z-50 flex flex-col items-center justify-center p-6 select-none font-mono">
-          <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-2">
+          <div className="text-amber-200 text-lg uppercase tracking-widest font-bold mb-1">
             Surplus Cache
           </div>
-          <p className="text-xs text-neutral-400 mb-8">
-            Choose a relic to stow in your satchel:
+          <p className="text-xs text-neutral-400 mb-3">
+            Exchange your overkill blood harvest for field relics:
           </p>
 
+          {/* Blood Bank Balance Indicator */}
+          <div className="flex items-center gap-2 mb-8 px-4 py-1.5 bg-[#140e0b] border border-[#3a2215] rounded-sm shadow-inner">
+            <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">Blood Bank:</span>
+            <span className="font-['Cinzel',_serif] text-sm font-black text-red-400 tracking-wider">
+              {totalOverkillDamage}
+            </span>
+            <span className="text-[10px] uppercase font-bold text-amber-800">OZ</span>
+          </div>
+
           <div className="flex gap-6 items-center justify-center max-w-xl">
-            {itemChoices.map(itemId => {
-              const def = ALL_ITEMS[itemId];
-              return (
-                <button
-                  key={itemId}
-                  onClick={() => handleSelectItem(itemId)}
-                  className="w-44 p-4 bg-[#140d09] border border-[#3e2316] hover:border-amber-400 rounded-sm flex flex-col items-center text-center transition-all duration-150 hover:scale-105 group cursor-pointer"
-                >
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                    {def.emoji}
-                  </div>
-                  <div className="text-xs font-bold text-amber-100 uppercase mb-2">
-                    {def.name}
-                  </div>
-                  <div className="text-[10px] text-neutral-400 leading-relaxed">
-                    {def.description}
-                  </div>
-                </button>
-              );
-            })}
+            {itemChoices.length === 0 ? (
+              <div className="text-xs text-neutral-500 italic py-8">
+                The cache shelves have been emptied.
+              </div>
+            ) : (
+              itemChoices.map(itemId => {
+                const def = ALL_ITEMS[itemId];
+                const cost = ITEM_COSTS[itemId] ?? 3;
+                const satchelFull = items.findIndex(s => s === null) === -1;
+                const canAfford = totalOverkillDamage >= cost && !satchelFull;
+
+                return (
+                  <button
+                    key={itemId}
+                    disabled={!canAfford}
+                    onClick={() => handleSelectItem(itemId)}
+                    className={`w-44 p-4 border rounded-sm flex flex-col items-center text-center transition-all duration-150 relative ${
+                      canAfford
+                        ? 'bg-[#140d09] border-[#3e2316] hover:border-amber-400 hover:scale-105 group cursor-pointer'
+                        : 'bg-[#0d0907] border-[#20150f] opacity-45 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                      {def.emoji}
+                    </div>
+                    <div className="text-xs font-bold text-amber-100 uppercase mb-2">
+                      {def.name}
+                    </div>
+                    <div className="text-[10px] text-neutral-400 leading-relaxed mb-4">
+                      {def.description}
+                    </div>
+
+                    <div className={`mt-auto px-2.5 py-1 rounded-xs border text-[11px] font-bold tracking-wider ${
+                      totalOverkillDamage >= cost
+                        ? 'border-red-900/80 bg-red-950/40 text-red-300'
+                        : 'border-neutral-800 bg-neutral-900/60 text-neutral-600'
+                    }`}>
+                      🩸 {cost} OZ
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
 
           <button
             onClick={() => setScreen('EVENT_CROSSROADS')}
-            className="mt-10 px-4 py-2 border border-[#3e2316] text-[#8c7662] hover:text-neutral-200 text-xs uppercase tracking-wider cursor-pointer"
+            className="mt-10 px-5 py-2 border border-[#3e2316] text-[#8c7662] hover:text-neutral-200 text-xs uppercase tracking-wider cursor-pointer transition-colors"
           >
-            Leave Empty-Handed
+            Leave Cache
           </button>
         </div>
       )}
