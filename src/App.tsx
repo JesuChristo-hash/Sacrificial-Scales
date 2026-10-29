@@ -9156,11 +9156,21 @@ export default function App() {
                 <button onClick={() => handleDevForce('goobert')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-emerald-400 hover:text-emerald-200 border border-emerald-950/60 hover:border-emerald-800 transition cursor-pointer">BEGOTTEN EVENT</button>
                 <button onClick={() => handleDevForce('cave')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-stone-300 hover:text-stone-100 border border-stone-800 hover:border-stone-600 transition cursor-pointer">CAVE TRIAL</button>
                 <button onClick={() => handleDevForce('totem')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-400 hover:text-amber-200 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">WOODCARVER</button>
+                <button onClick={() => handleDevForce('items')} className="py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider text-amber-300 hover:text-amber-100 border border-amber-950/60 hover:border-amber-800 transition cursor-pointer">SURPLUS CACHE</button>
               </div>
             )}
 
-            {/* Quick Actions (Tip Scales, Alter Deck, New Hand) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 border-b border-amber-950/40 pb-5">
+            {/* Quick Actions (Tip Scales, Alter Deck, New Hand, Blood Injection) */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6 border-b border-amber-950/40 pb-5">
+              <button
+                onClick={() => {
+                  setTotalOverkillDamage(prev => prev + 10);
+                  addLog("[DEV] Injected +10 oz to Blood Bank.");
+                }}
+                className="py-2 px-3 bg-[#1a0e0c] hover:bg-[#281310] active:bg-[#120807] border border-red-900/60 hover:border-red-600 rounded-sm font-mono text-[11px] uppercase tracking-wider text-red-300 transition-all flex items-center justify-center cursor-pointer shadow-sm"
+              >
+                +10 BLOOD OZ
+              </button>
               <button
                 onClick={() => {
                   const targetWin = getRequiredScaleWinDamage();
