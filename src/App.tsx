@@ -2423,6 +2423,66 @@ export default function App() {
   const [isTalismanPricked, setIsTalismanPricked] = useState<boolean>(false);
   const isCinematic = false;
 
+  // --- Run Persistence & Auto-Save ---
+  interface RunSaveData {
+    masterDeck: CardDef[];
+    items: (ItemId | null)[];
+    totalOverkillDamage: number;
+    stage: number;
+    level: number;
+    duelsCompleted: number;
+    totemPieces: any[];
+    activeTotem: { head: any; body: any };
+    currentStageName: string;
+    savedAt: number;
+  }
+
+  const RUN_SAVE_KEY = 'thread_bones_run_save';
+
+  const [showContinueModal, setShowContinueModal] = useState<boolean>(false);
+  const [savedRunExists, setSavedRunExists] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('thread_bones_run_save') !== null;
+    } catch {
+      return false;
+    }
+  });
+
+  const clearRunSave = () => {
+    try {
+      localStorage.removeItem(RUN_SAVE_KEY);
+      setSavedRunExists(false);
+    } catch (e) {
+      console.warn("Failed to clear save:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (screen === 'SPLASH' || screen === 'DECK_SELECT' || screen === 'DRAFT' || screen === 'GAME_OVER') {
+      return;
+    }
+    if (masterDeck && masterDeck.length > 0) {
+      try {
+        const payload: RunSaveData = {
+          masterDeck,
+          items,
+          totalOverkillDamage,
+          stage,
+          level,
+          duelsCompleted,
+          totemPieces,
+          activeTotem,
+          currentStageName,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(payload));
+        setSavedRunExists(true);
+      } catch (e) {
+        console.warn("Auto-save failed:", e);
+      }
+    }
+  }, [masterDeck, items, totalOverkillDamage, stage, level, duelsCompleted, totemPieces, activeTotem, currentStageName, screen]);
+
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
     magical_hat: 2,
@@ -5370,8 +5430,46 @@ export default function App() {
   };
 
   const handleLossMatch = () => {
+    clearRunSave();
     setModalAlert(null);
     setScreen('GAME_OVER');
+  };
+
+  const handleContinueRun = () => {
+    try {
+      const raw = localStorage.getItem(RUN_SAVE_KEY);
+      if (!raw) {
+        setShowContinueModal(false);
+        setScreen('DECK_SELECT');
+        return;
+      }
+
+      const data: RunSaveData = JSON.parse(raw);
+      setMasterDeck(data.masterDeck);
+      if (typeof masterDeckRef !== 'undefined' && masterDeckRef?.current) {
+        masterDeckRef.current = data.masterDeck;
+      }
+      setItems(data.items);
+      setTotalOverkillDamage(data.totalOverkillDamage ?? 0);
+      setStage(data.stage ?? 1);
+      setLevel(data.level ?? 1);
+      setDuelsCompleted(data.duelsCompleted ?? 0);
+      setTotemPieces(data.totemPieces ?? []);
+      setActiveTotem(data.activeTotem ?? { head: null, body: null });
+      if (data.currentStageName) {
+        setCurrentStageName(data.currentStageName);
+      }
+
+      setShowContinueModal(false);
+      triggerSfx('play');
+      addLog("Expedition restored from the occult seal.");
+      startNextDuel(undefined, data.masterDeck);
+    } catch (err) {
+      console.error("Failed to load save file:", err);
+      clearRunSave();
+      setShowContinueModal(false);
+      setScreen('DECK_SELECT');
+    }
   };
 
   // --- Duel Initialization ---
@@ -7435,12 +7533,12 @@ export default function App() {
   {/* THREAD */}
   <pre 
     style={{ 
-      fontFamily: '"Courier New", Courier, monospace', 
+      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92',
-      textShadow: '0 0 14px rgba(239, 68, 68, 0.85), 0 0 30px rgba(185, 28, 28, 0.5)'
+      lineHeight: '0.95',
+      textShadow: '0 0 0.2em rgba(239, 68, 68, 0.95), 0 0 0.55em rgba(185, 28, 28, 0.65)'
     }}
-    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-4 sm:p-6 overflow-visible"
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
   >
 {`    ███        ▄█    █▄       ▄████████    ▄████████    ▄████████ ████████▄  
 ▀█████████▄   ███    ███     ███    ███   ███    ███   ███    ███ ███   ▀███ 
@@ -7456,12 +7554,12 @@ export default function App() {
   {/* & (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Courier New", Courier, monospace', 
+      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92',
-      textShadow: '0 0 14px rgba(239, 68, 68, 0.85), 0 0 30px rgba(185, 28, 28, 0.5)'
+      lineHeight: '0.95',
+      textShadow: '0 0 0.2em rgba(239, 68, 68, 0.95), 0 0 0.55em rgba(185, 28, 28, 0.65)'
     }}
-    className="text-red-500 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-2 sm:p-4 overflow-visible my-0"
+    className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-1 overflow-visible my-0.5"
   >
 {`    ▄▄▄▄     
    ██  ██    
@@ -7474,12 +7572,12 @@ export default function App() {
   {/* BONES (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Courier New", Courier, monospace', 
+      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.92',
-      textShadow: '0 0 14px rgba(220, 38, 38, 0.85), 0 0 30px rgba(153, 27, 27, 0.5)'
+      lineHeight: '0.95',
+      textShadow: '0 0 0.2em rgba(220, 38, 38, 0.95), 0 0 0.55em rgba(153, 27, 27, 0.65)'
     }}
-    className="text-red-600 font-bold animate-occult-pulse text-[clamp(3.8px,1.05vw,10.5px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-4 sm:p-6 overflow-visible"
+    className="text-red-600 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
   >
 {`  ▀█████████▄   ▄██████▄  ███▄▄▄▄      ▄████████    ▄████████ 
     ███    ███ ███    ███ ███▀▀▀██▄   ███    ███   ███    ███ 
@@ -7570,26 +7668,28 @@ export default function App() {
             <button
               onClick={() => {
                 try {
-                  const audio = getAudioEngine();
-                  if (audio?.init) audio.init();
-                } catch (_) {}
-
-                if (!hasCompletedTutorial) {
-                  startTutorialDuel();
+                  ChiptuneAudio.init();
+                  ChiptuneAudio.playAmbient();
+                } catch (e) {
+                  console.warn("Audio autostart blocked:", e);
+                }
+                setAudioEnabled(true);
+                if (savedRunExists) {
+                  setShowContinueModal(true);
                 } else {
                   setScreen('DECK_SELECT');
                 }
               }}
-              className="group mt-4 sm:mt-6 cursor-pointer bg-transparent border-0 p-2 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center overflow-visible"
+              className="group mt-3 sm:mt-5 cursor-pointer bg-transparent border-0 p-1 focus:outline-none transition-transform duration-150 hover:scale-105 active:scale-95 flex justify-center overflow-visible"
             >
               <pre 
                 style={{ 
-                  fontFamily: '"Courier New", Courier, monospace', 
+                  fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
                   letterSpacing: '0px',
-                  lineHeight: '0.92',
-                  textShadow: '0 0 12px rgba(239, 68, 68, 0.85), 0 0 24px rgba(220, 38, 38, 0.5)'
+                  lineHeight: '0.95',
+                  textShadow: '0 0 0.2em rgba(239, 68, 68, 0.95), 0 0 0.5em rgba(220, 38, 38, 0.6)'
                 }} 
-                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5px,0.85vw,8px)] whitespace-pre select-none p-3 overflow-visible"
+                className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5.5px,0.9vw,8.5px)] whitespace-pre select-none p-2 overflow-visible"
               >
 {`          ▀█████████▄   ▄████████    ▄██████▄   ▄█  ███▄▄▄▄           ▄████████  ▄█     ███     ███    █▄     ▄████████  ▄█       
            ███    ███  ███    ███   ███    ███ ███  ███▀▀▀██▄        ███    ███ ███ ▀█████████▄ ███    ███   ███    ███ ███       
@@ -7601,10 +7701,56 @@ export default function App() {
          ▄█████████▀   ██████████   ████████▀  █▀    ▀█   █▀         ███    ███ █▀     ▄████▀   ████████▀    ███    █▀  █████▄▄██ 
                                                                      ███    ███                                             ▀     `}
     </pre>
-  </button>
-          </div>
+        </button>
+      </div>
+    </div>
+  )}
+
+  {/* =========================================================================
+      CONTINUE RUN MODAL
+     ========================================================================= */}
+  {showContinueModal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-mono select-none animate-menu-fade-in">
+      <div className="w-full max-w-md bg-[#0c0805] border border-amber-950/80 p-6 sm:p-7 shadow-[0_0_40px_rgba(0,0,0,0.95)] text-center relative">
+        <div className="text-[10px] text-amber-700 uppercase tracking-widest mb-1">
+          Occult Seal Detected
         </div>
-      )}
+        <h3 className="font-['Cinzel',_serif] text-xl font-bold text-amber-100 uppercase tracking-widest mb-2">
+          Resume Expedition?
+        </h3>
+        <p className="text-xs text-stone-400 mb-6 font-mono leading-relaxed">
+          A previous run is tethered to this machine. Resume your descent into the dark, or burn the thread and begin anew?
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleContinueRun}
+            className="w-full py-2.5 px-4 bg-[#1e130c] hover:bg-[#2e1d13] border border-amber-600/80 hover:border-amber-400 text-amber-200 hover:text-white rounded-sm font-['Cinzel',_serif] font-bold text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md"
+          >
+            Resume Expedition
+          </button>
+
+          <button
+            onClick={() => {
+              clearRunSave();
+              setShowContinueModal(false);
+              setScreen('DECK_SELECT');
+            }}
+            className="w-full py-2 px-4 bg-[#140d09] hover:bg-[#20120b] border border-red-950/70 hover:border-red-800 text-red-400/90 hover:text-red-200 rounded-sm font-mono text-xs uppercase tracking-wider transition-all cursor-pointer"
+          >
+            Sever Thread (New Game)
+          </button>
+
+          <button
+            onClick={() => setShowContinueModal(false)}
+            className="mt-1 text-[11px] text-stone-500 hover:text-stone-300 uppercase tracking-wider cursor-pointer font-mono"
+          >
+            Back to Title
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 
       {/* =========================================================================
           STARTER DECK SELECTION SCREEN
@@ -11192,4 +11338,3 @@ export default function App() {
     </div>
   );
 }
-
