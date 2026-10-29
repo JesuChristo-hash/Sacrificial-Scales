@@ -7545,9 +7545,11 @@ export default function App() {
   {/* THREAD */}
   <pre 
     style={{ 
-      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
+      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.95',
+      lineHeight: '0.92',
+      fontVariantLigatures: 'none',
+      WebkitTextSizeAdjust: '100%',
       textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
     }}
     className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
@@ -7566,9 +7568,11 @@ export default function App() {
   {/* & (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
+      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.95',
+      lineHeight: '0.92',
+      fontVariantLigatures: 'none',
+      WebkitTextSizeAdjust: '100%',
       textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
     }}
     className="text-red-500 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-1 overflow-visible my-0.5"
@@ -7584,9 +7588,11 @@ export default function App() {
   {/* BONES (Centered) */}
   <pre 
     style={{ 
-      fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
+      fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
       letterSpacing: '0px', 
-      lineHeight: '0.95',
+      lineHeight: '0.92',
+      fontVariantLigatures: 'none',
+      WebkitTextSizeAdjust: '100%',
       textShadow: '0 0 0.12em rgba(220, 38, 38, 0.4)'
     }}
     className="text-red-600 font-bold animate-occult-pulse text-[clamp(4.2px,1.15vw,11px)] whitespace-pre inline-block text-left mx-auto select-none tracking-normal p-3 overflow-visible"
@@ -7696,10 +7702,12 @@ export default function App() {
             >
               <pre 
                 style={{ 
-                  fontFamily: '"Courier Prime", "Courier New", Courier, monospace', 
+                  fontFamily: '"Noto Sans Mono", "Courier New", Courier, monospace', 
                   letterSpacing: '0px', 
-                  lineHeight: '0.95',
-                  textShadow: '0 0 0.2em rgba(239, 68, 68, 0.95), 0 0 0.5em rgba(220, 38, 38, 0.6)'
+                  lineHeight: '0.92',
+                  fontVariantLigatures: 'none',
+                  WebkitTextSizeAdjust: '100%',
+                  textShadow: '0 0 0.12em rgba(239, 68, 68, 0.4)'
                 }} 
                 className="text-red-600 group-hover:text-red-400 font-normal animate-occult-pulse text-[clamp(5.5px,0.9vw,8.5px)] whitespace-pre select-none p-2 overflow-visible"
               >
