@@ -2406,6 +2406,7 @@ export default function App() {
   const [damagedCard, setDamagedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [evolvingCards, setEvolvingCards] = useState<Array<{ isPlayer: boolean; lane: number; phase: 'up' | 'down' }>>([]);
   const [destroyedCard, setDestroyedCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
+  const [incineratingLane, setIncineratingLane] = useState<number | null>(null);
   const [sacrificingLane, setSacrificingLane] = useState<number | null>(null);
   const [hpFlashingCard, setHpFlashingCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
   const [jitteringCard, setJitteringCard] = useState<{ isPlayer: boolean; lane: number } | null>(null);
@@ -3675,15 +3676,26 @@ export default function App() {
     setItems(nextItems);
   };
 
-  const handleItemTargetLane = (laneIndex: number) => {
-    if (!itemTargetMode || itemTargetSourceSlot === null) return;
+  const handleItemTargetLane = async (laneIndex: number) => {
     const targetCard = enemyBoard[laneIndex];
     if (!targetCard) return;
 
     const sourceSlot = itemTargetSourceSlot;
     const mode = itemTargetMode;
 
+    setItemTargetMode(null);
+    setItemTargetSourceSlot(null);
+
+    setItems(prev => {
+      const next = [...prev];
+      if (sourceSlot !== null) {
+        next[sourceSlot] = null;
+      }
+      return next;
+    });
+
     if (mode === 'joker_stamp') {
+      triggerSfx('play');
       setEnemyBoard(prev => {
         const next = [...prev];
         if (next[laneIndex]) {
@@ -3703,6 +3715,7 @@ export default function App() {
         setTimeout(() => setIsBoardShaking(false), 500);
         addLog("The Stone Wall remains unscathed by the matchbook's flame!");
       } else if (targetCard.name === 'Skeleton') {
+        triggerSfx('hit');
         setEnemyBoard(prev => {
           const next = [...prev];
           next[laneIndex] = {
@@ -3713,12 +3726,16 @@ export default function App() {
         });
         addLog(`The Skeleton erupts into a Flaming Skeleton!`);
       } else {
+        triggerSfx('hit');
+        setIncineratingLane(laneIndex);
+        addLog(`The Large Matchbook incinerates enemy ${targetCard.name}!`);
+        await new Promise(res => setTimeout(res, 750));
         setEnemyBoard(prev => {
           const next = [...prev];
           next[laneIndex] = null;
           return next;
         });
-        addLog(`The Large Matchbook incinerates enemy ${targetCard.name}!`);
+        setIncineratingLane(null);
       }
 
       // Inflict Burn on player's corresponding and adjacent columns
@@ -3742,12 +3759,6 @@ export default function App() {
         return next;
       });
     }
-
-    const nextItems = [...items];
-    nextItems[sourceSlot] = null;
-    setItems(nextItems);
-    setItemTargetMode(null);
-    setItemTargetSourceSlot(null);
   };
   
   // --- End Turn & Combat Resolution ---
@@ -10531,38 +10542,60 @@ export default function App() {
                            {/* Row 2: Opponent Active Board Slots */}
                            <div className="flex justify-center items-center gap-2 sm:gap-4 my-1 w-full overflow-visible">
                              {enemyBoard.map((card, idx) => {
-                               const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
-                               const isDamagedThisLane = damagedCard?.isPlayer === false && damagedCard?.lane === idx;
-                               const isDestroyedThisLane = destroyedCard?.isPlayer === false && destroyedCard?.lane === idx;
-                               const isHpFlashingThisLane = hpFlashingCard?.isPlayer === false && hpFlashingCard?.lane === idx;
-                               const isSigilJitterThisLane = jitteringCard?.isPlayer === false && jitteringCard?.lane === idx;
-                               const isDefendingThisLane = activeDefendingLane?.isPlayer === false && activeDefendingLane?.lane === idx;
-                               const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
-                               return (
-                                 <div
-                                  key={`e-slot-${idx}`}
-                                  onClick={() => {
-                                    if (itemTargetMode) {
-                                      handleItemTargetLane(idx);
-                                    }
-                                  }}
-                                  className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
-                                    isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
-                                  } ${
-                                    itemTargetMode && card
-                                      ? 'ring-2 ring-red-500/80 animate-pulse cursor-crosshair scale-[1.02]'
-                                      : ''
-                                  }`}
-                                >
-                                    {(!card || isAttackingThisLane) && (
-                                      <span className="absolute text-[10px] font-mono text-amber-900/30 select-none pointer-events-none">
-                                        •
-                                      </span>
-                                    )}
-                                   {card ? (
-                                     <div
-                                       className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
-                                         card.isDying || isDestroyedThisLane
+                                 const isAttackingThisLane = activeAttacker?.isPlayer === false && activeAttacker?.lane === idx;
+                                 const isDamagedThisLane = damagedCard?.isPlayer === false && damagedCard?.lane === idx;
+                                 const isDestroyedThisLane = destroyedCard?.isPlayer === false && destroyedCard?.lane === idx;
+                                 const isIncineratingThisLane = incineratingLane === idx;
+                                 const isHpFlashingThisLane = hpFlashingCard?.isPlayer === false && hpFlashingCard?.lane === idx;
+                                 const isSigilJitterThisLane = jitteringCard?.isPlayer === false && jitteringCard?.lane === idx;
+                                 const isDefendingThisLane = activeDefendingLane?.isPlayer === false && activeDefendingLane?.lane === idx;
+                                 const isZeroPowerThisLane = zeroPowerShakingCard?.isPlayer === false && zeroPowerShakingCard?.lane === idx;
+                                 return (
+                                   <div
+                                     key={`e-slot-${idx}`}
+                                     onClick={() => {
+                                       if (itemTargetMode) {
+                                         handleItemTargetLane(idx);
+                                       }
+                                     }}
+                                     className={`w-24 sm:w-28 h-36 sm:h-40 shrink-0 rounded-[3px] flex items-center justify-center relative box-border border border-dashed border-[#8c6747]/25 bg-transparent overflow-visible ${
+                                       isAttackingThisLane ? 'z-50' : card ? 'z-20' : 'z-0'
+                                     } ${
+                                       itemTargetMode && card
+                                         ? 'ring-2 ring-red-500/80 animate-pulse cursor-crosshair scale-[1.02]'
+                                         : ''
+                                     }`}
+                                   >
+                                     {/* Large Matchbook Incinerate Flame VFX Overlay */}
+                                     {isIncineratingThisLane && (
+                                       <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center overflow-visible">
+                                         <div className="absolute inset-[-25%] bg-radial from-orange-600/70 via-red-600/40 to-transparent blur-md animate-pulse" />
+                                         <div className="relative flex flex-col items-center z-10">
+                                           <span className="text-4xl filter drop-shadow-[0_0_18px_#ff4500] animate-bounce">
+                                             🔥
+                                           </span>
+                                           <span className="text-[10px] font-['Cinzel',_serif] font-black tracking-widest text-orange-200 drop-shadow-[0_0_10px_rgba(255,69,0,1)] uppercase mt-0.5 animate-pulse">
+                                             ASHES
+                                           </span>
+                                         </div>
+                                         <div className="absolute inset-x-0 bottom-2 flex justify-around opacity-90">
+                                           <span className="text-xs animate-ping">🔥</span>
+                                           <span className="text-sm animate-ping delay-100">🔥</span>
+                                         </div>
+                                       </div>
+                                     )}
+
+                                     {(!card || isAttackingThisLane) && (
+                                       <span className="absolute text-[10px] font-mono text-amber-900/30 select-none pointer-events-none">
+                                         •
+                                       </span>
+                                     )}
+                                    {card ? (
+                                      <div
+                                        className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
+                                          isIncineratingThisLane
+                                            ? 'scale-90 brightness-150 contrast-125 sepia hue-rotate-[-30deg] drop-shadow-[0_0_25px_#ff4500] opacity-30 transition-all duration-700'
+                                            : card.isDying || isDestroyedThisLane
                                            ? 'opacity-0 scale-75 pointer-events-none'
                                            : isEnemyRetracting
                                            ? 'transition-all duration-700 ease-in-out -translate-y-28 opacity-0 pointer-events-none'
