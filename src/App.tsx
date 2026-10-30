@@ -11142,57 +11142,51 @@ export default function App() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => {
-                  for (let i = 0; i < dieModal.count; i++) {
-                    handleDraw('sacrifice');
+                  const count = dieModal.count;
+                  const drawnSquirrels: CardDef[] = [];
+                  for (let i = 0; i < count; i++) {
+                    const card = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+                    if (isAcornActive) {
+                      card.attack = (card.attack || 0) + 1;
+                      card.health = (card.health || 0) + 1;
+                    }
+                    drawnSquirrels.push(card);
                   }
+                  setHand(prev => [...prev, ...drawnSquirrels]);
+                  triggerSfx('draw');
+                  addLog(`Loaded Die drew ${count} ${count === 1 ? 'Squirrel' : 'Squirrels'}.`);
                   setDieModal(null);
                 }}
                 className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
               >
                 Squirrels ({dieModal.count})
               </button>
-              <button
-                onClick={() => {
-                  for (let i = 0; i < dieModal.count; i++) {
-                    handleDraw('main');
-                  }
-                  setDieModal(null);
-                }}
-                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
-              >
-                Creatures ({dieModal.count})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Loaded Die Deck Choice Modal */}
-      {dieModal && (
-        <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-xs font-mono select-none">
-          <div className="max-w-xs w-full bg-[#120c09] border border-[#5a3822] p-5 text-center shadow-2xl rounded-sm">
-            <div className="text-4xl mb-2">🎲 {dieModal.roll}</div>
-            <div className="text-amber-200 font-bold text-sm tracking-widest uppercase mb-1">Loaded Die Cast</div>
-            <p className="text-xs text-neutral-400 mb-4">
-              Choose which deck yields {dieModal.count} {dieModal.count === 1 ? 'card' : 'cards'}:
-            </p>
-            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => {
-                  for (let i = 0; i < dieModal.count; i++) {
-                    (handleDraw as any)('sacrifice');
+                  const count = dieModal.count;
+                  const remainingDeck = [...deck];
+                  const drawnCards: CardDef[] = [];
+
+                  for (let i = 0; i < count; i++) {
+                    if (remainingDeck.length > 0) {
+                      const drawn = remainingDeck.pop()!;
+                      drawnCards.push(transformAmorphous(applyPlayerTotem(drawn, activeTotem)));
+                    } else {
+                      const pity = applyPlayerTotem(cloneCard(TOKEN_SQUIRREL, ouroborosBuffs), activeTotem);
+                      if (isAcornActive) {
+                        pity.attack = (pity.attack || 0) + 1;
+                        pity.health = (pity.health || 0) + 1;
+                      }
+                      drawnCards.push(pity);
+                      addLog("Your deck is empty! A Squirrel answers the Loaded Die.");
+                    }
                   }
-                  setDieModal(null);
-                }}
-                className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
-              >
-                Squirrels ({dieModal.count})
-              </button>
-              <button
-                onClick={() => {
-                  for (let i = 0; i < dieModal.count; i++) {
-                    (handleDraw as any)('deck');
-                  }
+
+                  setDeck(remainingDeck);
+                  setHand(prev => [...prev, ...drawnCards]);
+                  triggerSfx('draw');
+                  addLog(`Loaded Die drew: ${drawnCards.map(c => c.name).join(', ')}.`);
                   setDieModal(null);
                 }}
                 className="px-3.5 py-2 bg-[#221610] hover:bg-[#342218] border border-[#5a3822] text-amber-200 text-xs font-bold uppercase rounded-sm cursor-pointer transition-colors"
