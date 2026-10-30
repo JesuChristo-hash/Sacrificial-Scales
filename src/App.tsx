@@ -2490,20 +2490,22 @@ export default function App() {
 
   // --- Item Restock & Blood Bank Pricing ---
   const ITEM_COSTS: Record<ItemId, number> = {
-    magical_hat: 2,
-    coin_purse: 2,
-    bronze_acorn: 3,
-    bronze_crucifix: 3,
-    bone_lords_horn: 3,
-    loaded_die: 3,
-    joker_stamp: 4,
-    large_matchbook: 4,
+    magical_hat: 4,
+    coin_purse: 4,
+    bronze_acorn: 6,
+    bronze_crucifix: 6,
+    bone_lords_horn: 6,
+    loaded_die: 6,
+    joker_stamp: 8,
+    large_matchbook: 8,
   };
 
   const [itemChoices, setItemChoices] = useState<ItemId[]>([]);
   const [cacheConsolationCard, setCacheConsolationCard] = useState<CardDef | null>(null);
+  const [hasPurchasedItemThisEvent, setHasPurchasedItemThisEvent] = useState<boolean>(false);
 
   const startItemEvent = () => {
+    setHasPurchasedItemThisEvent(false);
     setCacheConsolationCard(null);
     const pool: ItemId[] = [
       'magical_hat',
@@ -2520,7 +2522,7 @@ export default function App() {
   };
 
   const handleSelectItem = (selectedId: ItemId) => {
-    const cost = ITEM_COSTS[selectedId] ?? 3;
+    const cost = ITEM_COSTS[selectedId] ?? 6;
     const emptySlot = items.findIndex(slot => slot === null);
 
     if (emptySlot === -1) {
@@ -2533,6 +2535,7 @@ export default function App() {
       return;
     }
 
+    setHasPurchasedItemThisEvent(true);
     setTotalOverkillDamage(prev => Math.max(0, prev - cost));
     setItems(prev => {
       const next = [...prev];
@@ -2546,10 +2549,11 @@ export default function App() {
 
   const handleLeaveCache = () => {
     const satchelFull = items.findIndex(s => s === null) === -1;
-    const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 3));
-    const cannotBuyMore = satchelFull || !canAffordAny || itemChoices.length === 0;
+    const canAffordAny = itemChoices.some(id => totalOverkillDamage >= (ITEM_COSTS[id] ?? 6));
+    const cannotBuyAnything = satchelFull || !canAffordAny;
 
-    if (cannotBuyMore) {
+    // Only grant token if player bought nothing and cannot purchase anything
+    if (!hasPurchasedItemThisEvent && cannotBuyAnything) {
       // Filter exclusively for collectible field cards (no tokens, boss obstacles, or unsacrificables)
       const validPool = MAIN_DECK_POOL.filter(
         c => !c.unsacrificable && !c.isSacrifice && c.cost !== undefined && !(c as any).isTerrain && c.name !== 'Stone Wall' && c.name !== 'Felled Tree'
@@ -10566,21 +10570,24 @@ export default function App() {
                                          : ''
                                      }`}
                                    >
-                                     {/* Large Matchbook Incinerate Flame VFX Overlay */}
+                                     {/* Realistic Matchbook Creeping Flame & Char Effect */}
                                      {isIncineratingThisLane && (
-                                       <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center overflow-visible">
-                                         <div className="absolute inset-[-25%] bg-radial from-orange-600/70 via-red-600/40 to-transparent blur-md animate-pulse" />
-                                         <div className="relative flex flex-col items-center z-10">
-                                           <span className="text-4xl filter drop-shadow-[0_0_18px_#ff4500] animate-bounce">
-                                             🔥
-                                           </span>
-                                           <span className="text-[10px] font-['Cinzel',_serif] font-black tracking-widest text-orange-200 drop-shadow-[0_0_10px_rgba(255,69,0,1)] uppercase mt-0.5 animate-pulse">
-                                             ASHES
-                                           </span>
-                                         </div>
-                                         <div className="absolute inset-x-0 bottom-2 flex justify-around opacity-90">
-                                           <span className="text-xs animate-ping">🔥</span>
-                                           <span className="text-sm animate-ping delay-100">🔥</span>
+                                       <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden rounded-[3px] border border-orange-500/60 shadow-[inset_0_0_20px_rgba(255,69,0,0.8)]">
+                                         {/* Thermal Wash */}
+                                         <div className="absolute inset-0 bg-gradient-to-t from-red-600/90 via-orange-500/70 to-amber-300/30 mix-blend-color-dodge animate-pulse" />
+                                         
+                                         {/* Creeping Carbon Black Char */}
+                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-neutral-950/90 to-transparent opacity-95 transition-opacity duration-700" />
+                                         
+                                         {/* Sweeping Ember Ignition Line */}
+                                         <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-orange-500 via-amber-400 to-transparent blur-[1px] opacity-80 animate-pulse" />
+
+                                         {/* Rising Incandescent Sparks */}
+                                         <div className="absolute inset-0 flex justify-around items-end pb-3">
+                                           <span className="w-1.5 h-1.5 rounded-full bg-amber-200 shadow-[0_0_8px_#ff6600] animate-ping" />
+                                           <span className="w-1 h-1 rounded-full bg-orange-400 shadow-[0_0_6px_#ff3300] animate-ping delay-150" />
+                                           <span className="w-1.5 h-1 rounded-full bg-yellow-300 shadow-[0_0_8px_#ffaa00] animate-ping delay-300" />
+                                           <span className="w-1 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ff0000] animate-ping delay-75" />
                                          </div>
                                        </div>
                                      )}
@@ -10592,9 +10599,9 @@ export default function App() {
                                      )}
                                     {card ? (
                                       <div
-                                        className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
+                                        className={`w-full h-full flex items-center justify-center transition-all duration-700 ease-in ${
                                           isIncineratingThisLane
-                                            ? 'scale-90 brightness-150 contrast-125 sepia hue-rotate-[-30deg] drop-shadow-[0_0_25px_#ff4500] opacity-30 transition-all duration-700'
+                                            ? 'scale-90 brightness-25 contrast-200 sepia hue-rotate-[-50deg] drop-shadow-[0_0_20px_rgba(255,69,0,1)] opacity-20 filter blur-[0.8px] -translate-y-2'
                                             : card.isDying || isDestroyedThisLane
                                            ? 'opacity-0 scale-75 pointer-events-none'
                                            : isEnemyRetracting

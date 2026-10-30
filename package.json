@@ -36,5 +36,9 @@
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-win32-x64-msvc": "^4.3.3"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }
