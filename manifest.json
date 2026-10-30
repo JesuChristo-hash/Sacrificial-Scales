@@ -1,0 +1,25 @@
+{
+  "name": "Thread & Bones",
+  "short_name": "Thread&Bones",
+  "description": "Occult tabletop roguelike",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#04060a",
+  "theme_color": "#04060a",
+  "icons": [
+    {
+      "src": "/assets/text/toast.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/text/toast.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
