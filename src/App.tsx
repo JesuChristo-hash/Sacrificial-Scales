@@ -3733,7 +3733,7 @@ export default function App() {
         triggerSfx('hit');
         setIncineratingLane(laneIndex);
         addLog(`The Large Matchbook incinerates enemy ${targetCard.name}!`);
-        await new Promise(res => setTimeout(res, 750));
+        await new Promise(res => setTimeout(res, 950));
         setEnemyBoard(prev => {
           const next = [...prev];
           next[laneIndex] = null;
@@ -8472,7 +8472,7 @@ export default function App() {
                           : 'border-[#3e2316] text-[#8c7662] hover:text-neutral-200'
                       }`}
                     >
-                      {cannotBuyMore ? 'Claim Card & Venture Forth' : 'Leave Cache'}
+                      {cannotBuyMore ? 'Venture Forth' : 'Leave Cache'}
                     </button>
                     {cannotBuyMore && (
                       <span className="mt-2 text-[10px] text-amber-600/70 font-mono tracking-wide">
@@ -10570,24 +10570,46 @@ export default function App() {
                                          : ''
                                      }`}
                                    >
-                                     {/* Realistic Matchbook Creeping Flame & Char Effect */}
+                                     {/* Large Matchbook True Incinerate & Ash Rig */}
                                      {isIncineratingThisLane && (
-                                       <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden rounded-[3px] border border-orange-500/60 shadow-[inset_0_0_20px_rgba(255,69,0,0.8)]">
-                                         {/* Thermal Wash */}
-                                         <div className="absolute inset-0 bg-gradient-to-t from-red-600/90 via-orange-500/70 to-amber-300/30 mix-blend-color-dodge animate-pulse" />
-                                         
-                                         {/* Creeping Carbon Black Char */}
-                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-neutral-950/90 to-transparent opacity-95 transition-opacity duration-700" />
-                                         
-                                         {/* Sweeping Ember Ignition Line */}
-                                         <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-orange-500 via-amber-400 to-transparent blur-[1px] opacity-80 animate-pulse" />
+                                       <div className="absolute inset-0 z-50 pointer-events-none overflow-visible flex items-center justify-center">
+                                         {/* Core Thermal Radiance */}
+                                         <div className="absolute -inset-4 bg-radial from-orange-500/80 via-red-600/40 to-transparent blur-md pointer-events-none" />
 
-                                         {/* Rising Incandescent Sparks */}
-                                         <div className="absolute inset-0 flex justify-around items-end pb-3">
-                                           <span className="w-1.5 h-1.5 rounded-full bg-amber-200 shadow-[0_0_8px_#ff6600] animate-ping" />
-                                           <span className="w-1 h-1 rounded-full bg-orange-400 shadow-[0_0_6px_#ff3300] animate-ping delay-150" />
-                                           <span className="w-1.5 h-1 rounded-full bg-yellow-300 shadow-[0_0_8px_#ffaa00] animate-ping delay-300" />
-                                           <span className="w-1 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ff0000] animate-ping delay-75" />
+                                         {/* Leaping Outer Flame Front (Licking above the card frame) */}
+                                         <div className="absolute -top-10 inset-x-0 bottom-0 pointer-events-none flex justify-center items-end overflow-visible">
+                                           <div 
+                                             className="w-14 h-32 bg-gradient-to-t from-red-600 via-orange-500 to-amber-200 blur-[2px] rounded-t-full opacity-90 anim-flame-a"
+                                             style={{ clipPath: 'polygon(50% 0%, 85% 35%, 100% 70%, 80% 100%, 20% 100%, 0% 70%, 15% 35%)' }}
+                                           />
+                                           <div 
+                                             className="absolute w-10 h-28 bg-gradient-to-t from-orange-600 via-amber-400 to-yellow-100 blur-[1px] rounded-t-full opacity-95 anim-flame-b"
+                                             style={{ clipPath: 'polygon(50% 0%, 90% 40%, 100% 80%, 75% 100%, 25% 100%, 0% 80%, 10% 40%)' }}
+                                           />
+                                           <div className="absolute w-6 h-16 bg-white blur-[1px] rounded-t-full opacity-95 anim-flame-a bottom-2" />
+                                         </div>
+
+                                         {/* Burning Base Hearth Line */}
+                                         <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-red-600 via-orange-500 to-transparent opacity-90 blur-[1px]" />
+
+                                         {/* Drifting Embers */}
+                                         <div className="absolute inset-0 pointer-events-none overflow-visible">
+                                           <span 
+                                             className="absolute left-3 bottom-4 w-1.5 h-1.5 rounded-full bg-amber-100 shadow-[0_0_8px_#ff5500]"
+                                             style={{ animation: 'emberDrift1 0.75s ease-out infinite' }}
+                                           />
+                                           <span 
+                                             className="absolute right-4 bottom-6 w-1 h-1 rounded-full bg-yellow-200 shadow-[0_0_6px_#ff3300]"
+                                             style={{ animation: 'emberDrift2 0.85s ease-out 0.1s infinite' }}
+                                           />
+                                           <span 
+                                             className="absolute left-8 bottom-2 w-2 h-2 rounded-full bg-orange-200 shadow-[0_0_10px_#ff8800]"
+                                             style={{ animation: 'emberDrift3 0.65s ease-out 0.2s infinite' }}
+                                           />
+                                           <span 
+                                             className="absolute right-8 bottom-3 w-1.5 h-1 rounded-full bg-red-400 shadow-[0_0_6px_#ff1100]"
+                                             style={{ animation: 'emberDrift4 0.9s ease-out 0.15s infinite' }}
+                                           />
                                          </div>
                                        </div>
                                      )}
@@ -10599,9 +10621,9 @@ export default function App() {
                                      )}
                                     {card ? (
                                       <div
-                                        className={`w-full h-full flex items-center justify-center transition-all duration-700 ease-in ${
+                                        className={`w-full h-full flex items-center justify-center transition-all duration-300 ease-out ${
                                           isIncineratingThisLane
-                                            ? 'scale-90 brightness-25 contrast-200 sepia hue-rotate-[-50deg] drop-shadow-[0_0_20px_rgba(255,69,0,1)] opacity-20 filter blur-[0.8px] -translate-y-2'
+                                            ? 'anim-card-char pointer-events-none'
                                             : card.isDying || isDestroyedThisLane
                                            ? 'opacity-0 scale-75 pointer-events-none'
                                            : isEnemyRetracting
