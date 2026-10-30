@@ -8364,59 +8364,9 @@ export default function App() {
                 Unable to trade further, the peddler slides a card across the wood:
               </p>
 
-              {/* Inscribed Card Plaque */}
-              <div className="relative w-44 h-64 bg-[#dfd3bc] border-4 border-[#2b1f17] rounded-md shadow-[0_16px_40px_rgba(0,0,0,0.95),inset_0_0_24px_rgba(140,103,71,0.4)] flex flex-col justify-between p-3 select-none text-[#1a120b] font-mono transform hover:scale-[1.03] transition-transform duration-200">
-                {/* Header: Name and Cost */}
-                <div className="flex justify-between items-start border-b border-[#8c6747]/40 pb-1.5">
-                  <span className="font-['Cinzel',_serif] font-bold text-xs leading-tight tracking-wider text-[#1a120b] uppercase max-w-[105px] text-left">
-                    {cacheConsolationCard.name}
-                  </span>
-                  <div className="flex items-center gap-0.5 text-[11px] font-bold text-red-900">
-                    {cacheConsolationCard.cost !== undefined && cacheConsolationCard.cost > 0 && (
-                      <span>{'🩸'.repeat(cacheConsolationCard.cost)}</span>
-                    )}
-                    {(cacheConsolationCard as any).boneCost !== undefined && (cacheConsolationCard as any).boneCost > 0 && (
-                      <span className="text-[#3d2e24]">{(cacheConsolationCard as any).boneCost}🦴</span>
-                    )}
-                    {(!cacheConsolationCard.cost && !(cacheConsolationCard as any).boneCost) && (
-                      <span className="text-[10px] text-stone-600 uppercase font-sans">Free</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card Art / Icon */}
-                <div className="flex-1 flex flex-col items-center justify-center my-2 border border-dashed border-[#8c6747]/30 bg-[#c8b89e]/30 rounded-sm p-2">
-                  <div className="text-4xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] mb-1">
-                    {(cacheConsolationCard as any).emoji || '🐾'}
-                  </div>
-                  {cacheConsolationCard.sigils && cacheConsolationCard.sigils.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center mt-1">
-                      {cacheConsolationCard.sigils.map((s: any, idx: number) => {
-                        const sigName = typeof s === 'string' ? s : s?.name || '';
-                        return (
-                          <span
-                            key={idx}
-                            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#2b1f17]/10 border border-[#8c6747]/40 rounded-xs text-[#2b1f17]"
-                          >
-                            {sigName}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer: Attack and Health */}
-                <div className="flex justify-between items-center border-t border-[#8c6747]/40 pt-1 px-1">
-                  <div className="flex items-center gap-1 font-['Cinzel',_serif] font-black text-sm text-[#1a120b]">
-                    <span>{cacheConsolationCard.attack ?? 0}</span>
-                    <span className="text-[10px] text-[#8c6747]">⚔</span>
-                  </div>
-                  <div className="flex items-center gap-1 font-['Cinzel',_serif] font-black text-sm text-[#7f1d1d]">
-                    <span>{cacheConsolationCard.health ?? 0}</span>
-                    <span className="text-[10px] text-red-800">♥</span>
-                  </div>
-                </div>
+              {/* Standard Game Card Display */}
+              <div className="my-6 transform scale-110 sm:scale-125 transition-transform duration-200 filter drop-shadow-[0_16px_30px_rgba(0,0,0,0.9)] select-none pointer-events-none">
+                {renderCard(cacheConsolationCard)}
               </div>
 
               {/* Accept & Advance Button */}
